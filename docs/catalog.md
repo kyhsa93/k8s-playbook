@@ -22,15 +22,15 @@ Each entry consists of three parts: the anti-pattern, its correct-pattern counte
 
 | # | Anti-Pattern | Correct Pattern | Harness Check | Status |
 |---|---|---|---|---|
-| 7 | environment-specific values (domain, replica count, etc.) hardcoded into the base manifest | Base + Overlay (Kustomize) or base chart + per-env values (Helm) | diff renders across environments; flag env-specific values baked into the base | planned |
-| 8 | Helm `values.yaml` parameterizes every field, causing complexity blowup ("god values file") | only parameterize values that actually vary per environment | measure values.yaml schema size vs. actual per-env override ratio | planned |
+| 7 | environment-specific values (domain, replica count, etc.) hardcoded into the base manifest | Base + Overlay (Kustomize) or base chart + per-env values (Helm) | diff renders across environments; flag env-specific values baked into the base | implemented |
+| 8 | Helm `values.yaml` parameterizes every field, causing complexity blowup ("god values file") | only parameterize values that actually vary per environment | measure values.yaml schema size vs. actual per-env override ratio | implemented |
 
 ## 4. Secrets
 
 | # | Anti-Pattern | Correct Pattern | Harness Check | Status |
 |---|---|---|---|---|
-| 9 | secret values exposed via ConfigMap or plain env vars | reference a `Secret` resource (`secretKeyRef`/`envFrom`) | scan ConfigMap/env values for secret-like keywords (password, token, key) | planned |
-| 10 | plaintext secrets committed to the Git repo | commit only encrypted forms (Sealed Secrets, External Secrets Operator, etc.) | scan the repo for plaintext Secret manifests | planned |
+| 9 | secret values exposed via ConfigMap or plain env vars | reference a `Secret` resource (`secretKeyRef`/`envFrom`) | scan ConfigMap/env values for secret-like keywords (password, token, key) | implemented |
+| 10 | plaintext secrets committed to the Git repo | commit only encrypted forms (Sealed Secrets, External Secrets Operator, etc.) | scan the repo for plaintext Secret manifests | implemented |
 
 ## 5. Deployment / Sync (GitOps)
 

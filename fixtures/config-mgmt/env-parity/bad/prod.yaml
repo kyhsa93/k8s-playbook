@@ -1,0 +1,32 @@
+# Same base values as dev.yaml/staging.yaml -- host and API_URL never vary across
+# any of the three "environments", the tell-tale sign of item 7's anti-pattern.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-api:1.4.2
+          env:
+            - name: API_URL
+              value: https://payment-api.example.com
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  rules:
+    - host: payment-api.example.com

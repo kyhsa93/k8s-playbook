@@ -17,6 +17,8 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Kustomize + Helm fixtures added, harness genericity validated for items 1-6 (`scripts/verify-genericity.sh`)
 - [x] GitOps-state harness (`harness/check_gitops_state.py`, catalog items 11-13: drift, promotion gates, App-of-Apps/Kustomization-tree structure)
 - [x] Genericity validated against real Argo CD/Flux/Kargo schemas and a real cluster (`scripts/verify-gitops-state.sh`) — this pass found and fixed 2 real bugs (see below)
+- [x] Config-management harness (`harness/check_config_mgmt.py`, catalog items 7-8: env-parity, values-file bloat) and Secrets harness (`harness/check_secrets.py`, catalog items 9-10: exposure, plaintext-in-Git), built against minimal fixtures (`scripts/verify-config-secrets.sh`)
+- [ ] Validate items 7-10 against real Kustomize overlay / Helm values-file genericity, and item 14-15 (namespace/tenancy)
 
 ## Usage
 
@@ -44,6 +46,23 @@ python3 harness/check_gitops_state.py apps fixtures/gitops/apps/bad.yaml        
 
 # run all GitOps-state fixtures through the harness and assert the expected verdict
 scripts/verify-gitops-state.sh
+
+# Configuration-management checks (catalog items 7-8)
+python3 harness/check_config_mgmt.py env-parity fixtures/config-mgmt/env-parity/bad/{dev,staging,prod}.yaml    # exits 1
+python3 harness/check_config_mgmt.py env-parity fixtures/config-mgmt/env-parity/good/{dev,staging,prod}.yaml   # exits 0
+python3 harness/check_config_mgmt.py values-bloat fixtures/config-mgmt/values-bloat/bad/values.yaml \
+  fixtures/config-mgmt/values-bloat/bad/values-{dev,staging,prod}.yaml    # exits 1, "god values file"
+python3 harness/check_config_mgmt.py values-bloat fixtures/config-mgmt/values-bloat/good/values.yaml \
+  fixtures/config-mgmt/values-bloat/good/values-{dev,staging,prod}.yaml   # exits 0
+
+# Secrets checks (catalog items 9-10)
+python3 harness/check_secrets.py exposure fixtures/secrets/exposure-bad.yaml    # exits 1
+python3 harness/check_secrets.py exposure fixtures/secrets/exposure-good.yaml   # exits 0
+python3 harness/check_secrets.py plaintext fixtures/secrets/plaintext-bad.yaml  # exits 1
+python3 harness/check_secrets.py plaintext fixtures/secrets/plaintext-good.yaml # exits 0
+
+# run all config-mgmt/secrets fixtures through their harnesses and assert the expected verdict
+scripts/verify-config-secrets.sh
 ```
 
 Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.

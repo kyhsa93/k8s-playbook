@@ -1,0 +1,39 @@
+# A "god values file" -- every conceivable field is parameterized, but the
+# per-env override files below only ever touch 2 of them.
+replicaCount: 2
+image:
+  repository: payment-api
+  tag: "1.4.2"
+  pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+securityContext:
+  readOnlyRootFilesystem: true
+service:
+  type: ClusterIP
+  port: 8080
+ingress:
+  enabled: true
+  className: nginx
+  host: payment-api.example.com
+  tls:
+    enabled: false
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,5 @@
+replicaCount: 2
+ingress:
+  host: staging.payment-api.example.com
+env:
+  apiUrl: https://staging.payment-api.example.com

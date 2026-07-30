@@ -1,0 +1,11 @@
+replicaCount: 3
+image:
+  tag: "1.4.2"
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+ingress:
+  host: payment-api.example.com
+env:
+  apiUrl: https://payment-api.example.com

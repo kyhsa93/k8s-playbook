@@ -1,0 +1,14 @@
+# Base values.yaml with a small parameter surface -- almost every key here is
+# actually varied by at least one per-environment override file.
+replicaCount: 2
+image:
+  repository: payment-api
+  tag: "1.4.2"
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+ingress:
+  host: payment-api.example.com
+env:
+  apiUrl: https://payment-api.example.com
