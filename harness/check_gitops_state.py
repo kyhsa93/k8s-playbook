@@ -11,9 +11,16 @@ import sys
 
 import yaml
 
-IGNORED_METADATA_KEYS = {
-    "resourceVersion", "uid", "generation", "creationTimestamp",
-    "managedFields", "selfLink",
+# Fields the Kubernetes API server / admission defaulting fills in on live Deployment-family
+# resources even when Git never declared them -- confirmed by applying declared.yaml to a
+# real kind cluster and diffing the live dump (see fixtures/gitops/drift/live-good.yaml).
+# Without this list every untouched resource would flood the report with false-positive
+# "drift" for fields nobody ever touched.
+SERVER_DEFAULTED_KEYS = {
+    "progressDeadlineSeconds", "revisionHistoryLimit", "strategy",
+    "dnsPolicy", "restartPolicy", "schedulerName", "terminationGracePeriodSeconds",
+    "securityContext", "imagePullPolicy", "resources",
+    "terminationMessagePath", "terminationMessagePolicy", "creationTimestamp",
 }
 
 
@@ -28,17 +35,37 @@ def resource_key(doc):
 
 
 def diff_paths(a, b, prefix):
-    """Recursively collect dotted-path differences between two values."""
+    """Recursively collect dotted-path differences between two values.
+
+    Dicts: a key present only in `b` (live) is real drift UNLESS it's a known
+    server-defaulted field. Lists of named objects (containers, volumes, ...) are
+    matched by name so per-item server defaulting doesn't produce a whole-list mismatch.
+    """
     if isinstance(a, dict) and isinstance(b, dict):
         diffs = []
         for k in sorted(set(a) | set(b)):
             path = f"{prefix}.{k}"
             if k not in a:
+                if k in SERVER_DEFAULTED_KEYS:
+                    continue
                 diffs.append(f"{path}: missing in declared, present in live ({b[k]!r})")
             elif k not in b:
                 diffs.append(f"{path}: present in declared ({a[k]!r}), missing in live")
             else:
                 diffs.extend(diff_paths(a[k], b[k], path))
+        return diffs
+    if isinstance(a, list) and isinstance(b, list) and a and all(isinstance(x, dict) and "name" in x for x in a):
+        b_by_name = {x.get("name"): x for x in b if isinstance(x, dict)}
+        diffs = []
+        for item in a:
+            name = item["name"]
+            path = f"{prefix}[name={name}]"
+            if name not in b_by_name:
+                diffs.append(f"{path}: present in declared, missing in live")
+            else:
+                diffs.extend(diff_paths(item, b_by_name[name], path))
+        for name in set(b_by_name) - {item["name"] for item in a}:
+            diffs.append(f"{prefix}[name={name}]: not declared in Git, present in live")
         return diffs
     if a != b:
         return [f"{prefix}: declared={a!r} live={b!r}"]
@@ -107,8 +134,47 @@ def check_promotion(path):
 APP_KINDS = {"Application", "Kustomization"}
 
 
+def has_flux_dependency_tree(apps, names):
+    # Flux expresses parent/child ordering via spec.dependsOn -- the controller never
+    # stamps ownerReferences on a Kustomization it didn't itself generate.
+    return any(
+        any(dep.get("name") in names for dep in a.get("spec", {}).get("dependsOn", []))
+        for a in apps
+    )
+
+
+def has_argocd_directory_recursion(apps):
+    # Classic Argo CD App-of-Apps: a root Application syncs a directory containing the
+    # other Application manifests via spec.source(s).directory.recurse: true. Deleting
+    # the root leaves children orphaned (no ownerReferences involved).
+    for a in apps:
+        if a.get("kind") != "Application":
+            continue
+        sources = a.get("spec", {}).get("sources") or [a.get("spec", {}).get("source", {})]
+        if any(s.get("directory", {}).get("recurse") for s in sources):
+            return True
+    return False
+
+
+def has_applicationset_ownership(docs):
+    # ApplicationSet is the one real pattern where ownerReferences actually get set --
+    # by the ApplicationSet controller, pointing at the ApplicationSet, not a root Application.
+    appset_names = {d.get("metadata", {}).get("name") for d in docs if d.get("kind") == "ApplicationSet"}
+    if not appset_names:
+        return False
+    return any(
+        d.get("kind") == "Application"
+        and any(
+            ref.get("kind") == "ApplicationSet" and ref.get("name") in appset_names
+            for ref in d.get("metadata", {}).get("ownerReferences", [])
+        )
+        for d in docs
+    )
+
+
 def check_apps(path):
-    apps = [d for d in load_docs(path) if d.get("kind") in APP_KINDS]
+    docs = load_docs(path)
+    apps = [d for d in docs if d.get("kind") in APP_KINDS]
     if not apps:
         print(f"no Application/Kustomization resources found in {path}")
         return 1
@@ -117,16 +183,15 @@ def check_apps(path):
         return 0
 
     names = {a.get("metadata", {}).get("name") for a in apps}
-    has_root_managed_child = any(
-        any(ref.get("name") in names for ref in a.get("metadata", {}).get("ownerReferences", []))
-        for a in apps
-    )
-
-    if has_root_managed_child:
+    if (
+        has_flux_dependency_tree(apps, names)
+        or has_argocd_directory_recursion(apps)
+        or has_applicationset_ownership(docs)
+    ):
         print(f"PASS: {len(apps)} app(s) checked, managed via an App-of-Apps/Kustomization tree")
         return 0
-    print(f"FAIL: {len(apps)} apps found, none has an ownerReference to a root app "
-          f"-- looks like they were registered one by one by hand")
+    print(f"FAIL: {len(apps)} apps found, no dependsOn tree, directory-recursion root, or "
+          f"ApplicationSet ownership found -- looks like they were registered one by one by hand")
     return 1
 
 

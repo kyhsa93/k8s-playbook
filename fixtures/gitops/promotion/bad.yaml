@@ -1,29 +1,40 @@
-# Promotion pipeline (Kargo-style Stage resources) with no verification gate before prod:
-# a dev change can reach prod with nothing checking it in between.
-apiVersion: promotion.example/v1
+# Real Kargo Stage schema (kargo.akuity.io/v1alpha1) with no verification gate before
+# prod: a dev change can reach prod with nothing checking it in between.
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   name: dev
+  namespace: kargo-payment
 spec:
   requestedFreight:
-    - origin: payment-api
+    - origin:
+        kind: Warehouse
+        name: payment-api
+      sources:
+        direct: true
 ---
-apiVersion: promotion.example/v1
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   name: staging
+  namespace: kargo-payment
 spec:
   requestedFreight:
-    - origin: payment-api
+    - origin:
+        kind: Warehouse
+        name: payment-api
       sources:
         stages: [dev]
 ---
-apiVersion: promotion.example/v1
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   name: prod
+  namespace: kargo-payment
 spec:
   requestedFreight:
-    - origin: payment-api
+    - origin:
+        kind: Warehouse
+        name: payment-api
       sources:
         stages: [staging]

@@ -1,33 +1,45 @@
-# Promotion pipeline where every non-dev stage has a verification gate before freight
-# is allowed to advance (dev is the entry point and needs no incoming gate).
-apiVersion: promotion.example/v1
+# Real Kargo Stage schema (kargo.akuity.io/v1alpha1). Every non-dev stage has a
+# verification gate before freight is allowed to advance (dev is the entry point,
+# sourcing freight directly from the Warehouse, and needs no incoming gate).
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   name: dev
+  namespace: kargo-payment
 spec:
   requestedFreight:
-    - origin: payment-api
+    - origin:
+        kind: Warehouse
+        name: payment-api
+      sources:
+        direct: true
 ---
-apiVersion: promotion.example/v1
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   name: staging
+  namespace: kargo-payment
 spec:
   requestedFreight:
-    - origin: payment-api
+    - origin:
+        kind: Warehouse
+        name: payment-api
       sources:
         stages: [dev]
   verification:
     analysisTemplates:
       - name: integration-tests
 ---
-apiVersion: promotion.example/v1
+apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
   name: prod
+  namespace: kargo-payment
 spec:
   requestedFreight:
-    - origin: payment-api
+    - origin:
+        kind: Warehouse
+        name: payment-api
       sources:
         stages: [staging]
   verification:

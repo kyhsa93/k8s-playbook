@@ -1,26 +1,81 @@
-# Simulated `kubectl get -o yaml` dump of the live cluster: matches declared.yaml exactly
-# (server-managed metadata fields like resourceVersion/uid/managedFields are ignored by the harness).
+# Genuine `kubectl get -o yaml` dump from a real kind cluster after `kubectl apply -f
+# declared.yaml` (no manual edits afterward). Captured verbatim -- this is exactly what
+# exposed the false-positive bug that SERVER_DEFAULTED_KEYS in check_gitops_state.py now
+# accounts for: the API server fills in spec.strategy, container imagePullPolicy/resources,
+# pod dnsPolicy/restartPolicy/schedulerName/securityContext/terminationGracePeriodSeconds,
+# etc. even though none of it was ever declared in Git.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"payment-api","namespace":"payment"},"spec":{"replicas":3,"selector":{"matchLabels":{"app":"payment-api"}},"template":{"metadata":{"labels":{"app":"payment-api"}},"spec":{"containers":[{"image":"registry.example.com/payment-api:1.4.2","name":"payment-api"}]}}}}
+  creationTimestamp: "2026-07-30T15:41:02Z"
+  generation: 1
   name: payment-api
   namespace: payment
-  resourceVersion: "482910"
-  uid: 8f2c3e1a-0000-4a11-9c2e-111111111111
+  resourceVersion: "570"
+  uid: cd48417c-497a-423d-8333-cf8e2bdfe956
 spec:
+  progressDeadlineSeconds: 600
   replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: payment-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
   template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: payment-api
     spec:
       containers:
-        - name: payment-api
-          image: registry.example.com/payment-api:1.4.2
+      - image: registry.example.com/payment-api:1.4.2
+        imagePullPolicy: IfNotPresent
+        name: payment-api
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-30T15:41:02Z"
+    lastUpdateTime: "2026-07-30T15:41:02Z"
+    message: Deployment does not have minimum availability.
+    reason: MinimumReplicasUnavailable
+    status: "False"
+    type: Available
+  - lastTransitionTime: "2026-07-30T15:41:02Z"
+    lastUpdateTime: "2026-07-30T15:41:02Z"
+    message: ReplicaSet "payment-api-6b85bd8c4d" is progressing.
+    reason: ReplicaSetUpdated
+    status: "True"
+    type: Progressing
+  observedGeneration: 1
+  replicas: 3
+  unavailableReplicas: 3
+  updatedReplicas: 3
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: payment-api-config
-  namespace: payment
-  resourceVersion: "482911"
-  uid: 8f2c3e1a-0000-4a11-9c2e-222222222222
 data:
   LOG_LEVEL: info
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"LOG_LEVEL":"info"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"payment-api-config","namespace":"payment"}}
+  creationTimestamp: "2026-07-30T15:40:31Z"
+  name: payment-api-config
+  namespace: payment
+  resourceVersion: "508"
+  uid: 65b5c7c3-b263-4909-a00b-f6b8caf94f57

@@ -1,5 +1,8 @@
-# App-of-Apps: a root Application manages the child Applications as a group. Argo CD
-# stamps ownerReferences on children it creates, so that reference is the checkable signal.
+# Real Argo CD "App of Apps" pattern: a root Application syncs a repo directory with
+# `directory.recurse: true`, so every Application manifest under that path (the child
+# apps below) gets applied as a managed resource of the root's sync. There is no
+# ownerReference from child to root -- recurse is the actual mechanism, which is why
+# deleting the root without a finalizer famously leaves the children orphaned.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +12,10 @@ spec:
   source:
     repoURL: https://github.com/example/gitops-apps
     path: apps/
+    directory:
+      recurse: true
   destination:
+    server: https://kubernetes.default.svc
     namespace: argocd
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -17,10 +23,6 @@ kind: Application
 metadata:
   name: payment-api
   namespace: argocd
-  ownerReferences:
-    - apiVersion: argoproj.io/v1alpha1
-      kind: Application
-      name: root-app
 spec:
   source:
     repoURL: https://github.com/example/payment-api
@@ -33,10 +35,6 @@ kind: Application
 metadata:
   name: order-api
   namespace: argocd
-  ownerReferences:
-    - apiVersion: argoproj.io/v1alpha1
-      kind: Application
-      name: root-app
 spec:
   source:
     repoURL: https://github.com/example/order-api

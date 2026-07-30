@@ -1,40 +1,93 @@
-# Simulated live cluster state after manual `kubectl` edits bypassed the GitOps controller:
-# - `kubectl scale` bumped replicas 3 -> 5
-# - `kubectl set image` bumped the tag to 1.4.3 without a matching Git commit
-# - `kubectl edit configmap` flipped LOG_LEVEL to debug
-# - a Secret was created by hand and never committed to Git at all
+# Genuine `kubectl get -o yaml` dump from the same kind cluster after simulated manual
+# drift, all applied directly with kubectl (not through Git):
+#   kubectl scale deployment/payment-api --replicas=5
+#   kubectl set image deployment/payment-api payment-api=registry.example.com/payment-api:1.4.3
+#   kubectl patch configmap payment-api-config -p '{"data":{"LOG_LEVEL":"debug"}}'
+#   kubectl create secret generic payment-api-hotfix-creds --from-literal=api-key=...
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "2"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"payment-api","namespace":"payment"},"spec":{"replicas":3,"selector":{"matchLabels":{"app":"payment-api"}},"template":{"metadata":{"labels":{"app":"payment-api"}},"spec":{"containers":[{"image":"registry.example.com/payment-api:1.4.2","name":"payment-api"}]}}}}
+  creationTimestamp: "2026-07-30T15:41:02Z"
+  generation: 3
   name: payment-api
   namespace: payment
-  resourceVersion: "482955"
-  uid: 8f2c3e1a-0000-4a11-9c2e-111111111111
+  resourceVersion: "1020"
+  uid: cd48417c-497a-423d-8333-cf8e2bdfe956
 spec:
+  progressDeadlineSeconds: 600
   replicas: 5
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: payment-api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
   template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: payment-api
     spec:
       containers:
-        - name: payment-api
-          image: registry.example.com/payment-api:1.4.3
+      - image: registry.example.com/payment-api:1.4.3
+        imagePullPolicy: IfNotPresent
+        name: payment-api
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-30T15:41:02Z"
+    lastUpdateTime: "2026-07-30T15:41:02Z"
+    message: Deployment does not have minimum availability.
+    reason: MinimumReplicasUnavailable
+    status: "False"
+    type: Available
+  - lastTransitionTime: "2026-07-30T15:41:02Z"
+    lastUpdateTime: "2026-07-30T15:44:14Z"
+    message: ReplicaSet "payment-api-848bcddc4f" is progressing.
+    reason: ReplicaSetUpdated
+    status: "True"
+    type: Progressing
+  observedGeneration: 3
+  replicas: 7
+  unavailableReplicas: 7
+  updatedReplicas: 3
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: payment-api-config
-  namespace: payment
-  resourceVersion: "482956"
-  uid: 8f2c3e1a-0000-4a11-9c2e-222222222222
 data:
   LOG_LEVEL: debug
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"LOG_LEVEL":"info"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"payment-api-config","namespace":"payment"}}
+  creationTimestamp: "2026-07-30T15:40:31Z"
+  name: payment-api-config
+  namespace: payment
+  resourceVersion: "1022"
+  uid: 65b5c7c3-b263-4909-a00b-f6b8caf94f57
 ---
 apiVersion: v1
-kind: Secret
-metadata:
-  name: payment-api-hotfix-creds
-  namespace: payment
-  resourceVersion: "482957"
-  uid: 8f2c3e1a-0000-4a11-9c2e-333333333333
-type: Opaque
 data:
   api-key: c3VwZXItc2VjcmV0
+kind: Secret
+metadata:
+  creationTimestamp: "2026-07-30T15:44:14Z"
+  name: payment-api-hotfix-creds
+  namespace: payment
+  resourceVersion: "1023"
+  uid: f63f25a2-e3e6-4560-83ff-bfe485cc29cf
+type: Opaque

@@ -1,0 +1,43 @@
+# Real Flux Kustomization tree: parent/child ordering is expressed via spec.dependsOn,
+# not ownerReferences -- the kustomize-controller never stamps owner refs on a
+# Kustomization it didn't generate itself, so dependsOn is the only real signal that
+# these are managed as a group rather than three unrelated Kustomizations.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra
+  namespace: flux-system
+spec:
+  path: ./infra
+  sourceRef:
+    kind: GitRepository
+    name: gitops-repo
+  interval: 10m
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: payment-api
+  namespace: flux-system
+spec:
+  path: ./apps/payment-api
+  sourceRef:
+    kind: GitRepository
+    name: gitops-repo
+  interval: 10m
+  dependsOn:
+    - name: infra
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: order-api
+  namespace: flux-system
+spec:
+  path: ./apps/order-api
+  sourceRef:
+    kind: GitRepository
+    name: gitops-repo
+  interval: 10m
+  dependsOn:
+    - name: infra

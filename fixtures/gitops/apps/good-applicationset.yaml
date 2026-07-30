@@ -1,0 +1,55 @@
+# Real ApplicationSet pattern: this is the one case where Argo CD genuinely stamps
+# ownerReferences on Application resources -- set by the ApplicationSet controller,
+# pointing at the ApplicationSet itself (not a root Application).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: team-apps
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - app: payment-api
+          - app: order-api
+  template:
+    metadata:
+      name: "{{app}}"
+    spec:
+      source:
+        repoURL: https://github.com/example/{{app}}
+        path: deploy/
+      destination:
+        namespace: "{{app}}"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payment-api
+  namespace: argocd
+  ownerReferences:
+    - apiVersion: argoproj.io/v1alpha1
+      kind: ApplicationSet
+      name: team-apps
+spec:
+  source:
+    repoURL: https://github.com/example/payment-api
+    path: deploy/
+  destination:
+    namespace: payment
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: order-api
+  namespace: argocd
+  ownerReferences:
+    - apiVersion: argoproj.io/v1alpha1
+      kind: ApplicationSet
+      name: team-apps
+spec:
+  source:
+    repoURL: https://github.com/example/order-api
+    path: deploy/
+  destination:
+    namespace: order
