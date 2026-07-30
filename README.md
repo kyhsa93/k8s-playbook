@@ -20,7 +20,8 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Config-management harness (`harness/check_config_mgmt.py`, catalog items 7-8: env-parity, values-file bloat) and Secrets harness (`harness/check_secrets.py`, catalog items 9-10: exposure, plaintext-in-Git), built against minimal fixtures (`scripts/verify-config-secrets.sh`)
 - [x] Namespace/Tenancy harness (`harness/check_namespace_tenancy.py`, catalog items 14-15: default-namespace usage, ClusterRoleBinding vs. namespace-scoped RoleBinding), built against minimal fixtures (`scripts/verify-namespace-tenancy.sh`) — all 15 catalog items now have a first-pass implementation
 - [x] Config-management genericity validated (`scripts/verify-config-mgmt-genericity.sh`, closes issue #1) against a real Kustomize base+overlays, a real Helm chart, and a real public chart's values.yaml — no bugs found in the check logic itself, but it surfaced a real limitation (see below)
-- [ ] Secrets and Namespace/Tenancy genericity validation against real tooling (issues #2, #3)
+- [x] Secrets genericity validated (`scripts/verify-secrets-genericity.sh`, closes issue #2) against real Kustomize/Helm renders and real SealedSecret/ExternalSecret schemas — no bugs found
+- [ ] Namespace/Tenancy genericity validation against real tooling (issue #3)
 
 ## Usage
 
@@ -77,9 +78,28 @@ scripts/verify-namespace-tenancy.sh
 
 # Config-management genericity: real kustomize/helm renders + a real public chart (closes issue #1)
 scripts/verify-config-mgmt-genericity.sh
+
+# Secrets genericity: real kustomize/helm renders + real SealedSecret/ExternalSecret schemas (closes issue #2)
+scripts/verify-secrets-genericity.sh
 ```
 
 Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.
+
+### Secrets genericity validation (issue #2)
+
+- **exposure (item 9)** was validated against real `kustomize build` and `helm template` output
+  (`fixtures/secrets/kustomize-real/`, `fixtures/secrets/helm-real/`) — it correctly flags the plain-value/
+  ConfigMap-exposed cases and passes the `secretKeyRef` cases on genuinely rendered manifests, no bugs found.
+- **plaintext (item 10)** was validated against the real schemas of both wrapper kinds mentioned in the
+  catalog: [bitnami-labs/sealed-secrets](https://github.com/bitnami-labs/sealed-secrets) `SealedSecret`
+  (`apiVersion: bitnami.com/v1alpha1`, `spec.encryptedData`, `spec.template.type`) and
+  [external-secrets/external-secrets](https://github.com/external-secrets/external-secrets) `ExternalSecret`
+  (`apiVersion: external-secrets.io/v1`, `spec.secretStoreRef`, `spec.target`, `spec.data[].remoteRef`) —
+  confirmed via their docs/README examples. Both pass cleanly, and a genuine plain `kind: Secret` mixed into
+  the same file alongside them is still caught. Notably `ExternalSecret` has no top-level `data`/`stringData`
+  field the way a real `Secret` does (its `spec.data` only holds references into an external store, never
+  the material itself), so the check's `kind == "Secret"` filter naturally avoids it without needing an
+  explicit kind-exclusion list.
 
 ### Config-management genericity validation (issue #1)
 
