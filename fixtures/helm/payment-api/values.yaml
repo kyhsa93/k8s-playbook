@@ -1,0 +1,21 @@
+name: payment-api
+namespace: payment
+
+image:
+  repository: payment-api
+  tag: latest
+
+replicas: 1
+resources: {}
+
+probes:
+  enabled: false
+
+securityContext:
+  runAsNonRoot: false
+
+antiAffinity:
+  enabled: false
+
+pdb:
+  enabled: false

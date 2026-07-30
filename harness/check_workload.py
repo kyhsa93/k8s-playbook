@@ -115,8 +115,11 @@ def check_workload(doc, pdbs):
 
 
 def main(path):
-    with open(path) as f:
-        docs = [d for d in yaml.safe_load_all(f) if d]
+    if path == "-":
+        docs = [d for d in yaml.safe_load_all(sys.stdin) if d]
+    else:
+        with open(path) as f:
+            docs = [d for d in yaml.safe_load_all(f) if d]
 
     workloads = [d for d in docs if d.get("kind") in WORKLOAD_KINDS]
     pdbs = [d for d in docs if d.get("kind") == "PodDisruptionBudget"]
@@ -138,6 +141,6 @@ def main(path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("usage: check_workload.py <manifest.yaml>", file=sys.stderr)
+        print("usage: check_workload.py <manifest.yaml|->", file=sys.stderr)
         sys.exit(2)
     sys.exit(main(sys.argv[1]))

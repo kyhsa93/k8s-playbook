@@ -1,0 +1,4 @@
+apiVersion: v2
+name: payment-api
+description: Fixture chart used to validate harness genericity across templating tools
+version: 0.1.0
