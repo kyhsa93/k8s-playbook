@@ -1,0 +1,25 @@
+# Applications registered one by one by hand: no root app-of-apps, no ownerReferences
+# tying them together as a managed group.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payment-api
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/example/payment-api
+    path: deploy/
+  destination:
+    namespace: payment
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: order-api
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/example/order-api
+    path: deploy/
+  destination:
+    namespace: order

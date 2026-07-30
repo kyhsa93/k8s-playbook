@@ -1,0 +1,26 @@
+# Simulated `kubectl get -o yaml` dump of the live cluster: matches declared.yaml exactly
+# (server-managed metadata fields like resourceVersion/uid/managedFields are ignored by the harness).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: payment
+  resourceVersion: "482910"
+  uid: 8f2c3e1a-0000-4a11-9c2e-111111111111
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: payment-api
+          image: registry.example.com/payment-api:1.4.2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-api-config
+  namespace: payment
+  resourceVersion: "482911"
+  uid: 8f2c3e1a-0000-4a11-9c2e-222222222222
+data:
+  LOG_LEVEL: info

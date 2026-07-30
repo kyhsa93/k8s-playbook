@@ -1,0 +1,40 @@
+# Simulated live cluster state after manual `kubectl` edits bypassed the GitOps controller:
+# - `kubectl scale` bumped replicas 3 -> 5
+# - `kubectl set image` bumped the tag to 1.4.3 without a matching Git commit
+# - `kubectl edit configmap` flipped LOG_LEVEL to debug
+# - a Secret was created by hand and never committed to Git at all
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: payment
+  resourceVersion: "482955"
+  uid: 8f2c3e1a-0000-4a11-9c2e-111111111111
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+        - name: payment-api
+          image: registry.example.com/payment-api:1.4.3
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-api-config
+  namespace: payment
+  resourceVersion: "482956"
+  uid: 8f2c3e1a-0000-4a11-9c2e-222222222222
+data:
+  LOG_LEVEL: debug
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-api-hotfix-creds
+  namespace: payment
+  resourceVersion: "482957"
+  uid: 8f2c3e1a-0000-4a11-9c2e-333333333333
+type: Opaque
+data:
+  api-key: c3VwZXItc2VjcmV0

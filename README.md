@@ -15,7 +15,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Anti-pattern ↔ correct-pattern catalog draft ([docs/catalog.md](docs/catalog.md))
 - [x] Minimal fixture (raw manifest) + post-render workload harness (`harness/check_workload.py`, catalog items 1-6: resources, image tag, probes, security context, replica count, anti-affinity, PDB coverage)
 - [x] Kustomize + Helm fixtures added, harness genericity validated for items 1-6 (`scripts/verify-genericity.sh`)
-- [ ] GitOps-state harness (drift, promotion gates)
+- [x] GitOps-state harness (`harness/check_gitops_state.py`, catalog items 11-13: drift, promotion gates, App-of-Apps/Kustomization-tree structure), built against synthetic fixtures under `fixtures/gitops/`
 - [ ] Add Argo CD/Flux fixtures, validate harness genericity
 
 ## Usage
@@ -31,6 +31,18 @@ helm template fixtures/helm/payment-api -f fixtures/helm/payment-api/values-good
 
 # run all raw/Kustomize/Helm fixtures through the harness and assert the expected verdict
 scripts/verify-genericity.sh
+
+# GitOps-state checks (catalog items 11-13), one subcommand per item
+python3 harness/check_gitops_state.py drift fixtures/gitops/drift/declared.yaml fixtures/gitops/drift/live-good.yaml   # exits 0
+python3 harness/check_gitops_state.py drift fixtures/gitops/drift/declared.yaml fixtures/gitops/drift/live-bad.yaml    # exits 1
+python3 harness/check_gitops_state.py promotion fixtures/gitops/promotion/good.yaml   # exits 0
+python3 harness/check_gitops_state.py promotion fixtures/gitops/promotion/bad.yaml    # exits 1
+python3 harness/check_gitops_state.py apps fixtures/gitops/apps/good.yaml            # exits 0
+python3 harness/check_gitops_state.py apps fixtures/gitops/apps/bad.yaml             # exits 1
 ```
 
 Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.
+
+The GitOps-state fixtures are synthetic (no real cluster/Argo CD/Kargo involved) — same build order as the workload
+harness: a minimal fixture proves the checks first, real Argo CD/Flux fixtures come in a later pass to validate
+genericity.

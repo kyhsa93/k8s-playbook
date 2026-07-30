@@ -36,9 +36,9 @@ Each entry consists of three parts: the anti-pattern, its correct-pattern counte
 
 | # | Anti-Pattern | Correct Pattern | Harness Check | Status |
 |---|---|---|---|---|
-| 11 | manual `kubectl apply` used alongside a running GitOps controller | every change goes through a Git commit; no direct cluster edits | diff live cluster state vs. declared Git state — any drift is evidence of the violation | planned |
-| 12 | a dev change reaches prod with no verification gate | promote through dev→staging→prod with health checks/tests at each stage (e.g., Kargo) | check that each Stage definition has verification conditions | planned |
-| 13 | applications registered and managed one by one, by hand | manage declaratively via App of Apps (Argo CD) / a Kustomization tree (Flux) | check for a root app definition and that all child apps live under it | planned |
+| 11 | manual `kubectl apply` used alongside a running GitOps controller | every change goes through a Git commit; no direct cluster edits | diff live cluster state vs. declared Git state — any drift is evidence of the violation | implemented |
+| 12 | a dev change reaches prod with no verification gate | promote through dev→staging→prod with health checks/tests at each stage (e.g., Kargo) | check that each non-entry Stage definition has verification conditions | implemented |
+| 13 | applications registered and managed one by one, by hand | manage declaratively via App of Apps (Argo CD) / a Kustomization tree (Flux) | check for a root app definition and that all child apps carry an ownerReference to it | implemented |
 
 ## 6. Namespace / Tenancy
 

@@ -1,0 +1,36 @@
+# Promotion pipeline where every non-dev stage has a verification gate before freight
+# is allowed to advance (dev is the entry point and needs no incoming gate).
+apiVersion: promotion.example/v1
+kind: Stage
+metadata:
+  name: dev
+spec:
+  requestedFreight:
+    - origin: payment-api
+---
+apiVersion: promotion.example/v1
+kind: Stage
+metadata:
+  name: staging
+spec:
+  requestedFreight:
+    - origin: payment-api
+      sources:
+        stages: [dev]
+  verification:
+    analysisTemplates:
+      - name: integration-tests
+---
+apiVersion: promotion.example/v1
+kind: Stage
+metadata:
+  name: prod
+spec:
+  requestedFreight:
+    - origin: payment-api
+      sources:
+        stages: [staging]
+  verification:
+    analysisTemplates:
+      - name: smoke-test
+      - name: health-check
