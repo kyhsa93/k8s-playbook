@@ -13,8 +13,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 ## Status
 
 - [x] Anti-pattern ↔ correct-pattern catalog draft ([docs/catalog.md](docs/catalog.md))
-- [x] Minimal fixture (raw manifest) + post-render workload harness (`harness/check_workload.py`, catalog items 1-4)
-- [ ] Add HA-related checks (catalog items 5-6: PodDisruptionBudget, anti-affinity)
+- [x] Minimal fixture (raw manifest) + post-render workload harness (`harness/check_workload.py`, catalog items 1-6: resources, image tag, probes, security context, replica count, anti-affinity, PDB coverage)
 - [ ] Add Kustomize/Helm fixtures, validate harness genericity
 - [ ] GitOps-state harness (drift, promotion gates)
 - [ ] Add Argo CD/Flux fixtures, validate harness genericity

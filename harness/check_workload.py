@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Detect workload anti-patterns 1-4 from docs/catalog.md in rendered K8s manifests.
+"""Detect workload anti-patterns 1-6 from docs/catalog.md in rendered K8s manifests.
 
-Operates on final rendered YAML (Deployment/StatefulSet/DaemonSet), so it works
-identically whether the input came from a raw manifest, `kustomize build`, or
-`helm template` — no tool-specific assumptions.
+Operates on final rendered YAML (Deployment/StatefulSet/DaemonSet/PodDisruptionBudget),
+so it works identically whether the input came from a raw manifest, `kustomize build`,
+or `helm template` — no tool-specific assumptions.
 """
 import sys
 
 import yaml
 
 WORKLOAD_KINDS = {"Deployment", "StatefulSet", "DaemonSet"}
+HA_KINDS = {"Deployment", "StatefulSet"}  # DaemonSet has no replica-count HA concept
+MIN_REPLICAS = 2
 
 
 def check_resources(container):
@@ -60,7 +62,38 @@ CONTAINER_CHECKS = [
 ]
 
 
-def check_workload(doc):
+def check_replica_count(doc):
+    if doc.get("kind") not in HA_KINDS:
+        return []
+    replicas = doc.get("spec", {}).get("replicas")
+    if replicas is None or replicas < MIN_REPLICAS:
+        return [f"replicas={replicas} (expected >= {MIN_REPLICAS} for HA)"]
+    return []
+
+
+def check_anti_affinity(pod_spec):
+    if not pod_spec.get("affinity", {}).get("podAntiAffinity"):
+        return ["no podAntiAffinity defined; replicas may all land on the same node"]
+    return []
+
+
+def pdb_matches(pdb, workload_labels):
+    selector = pdb.get("spec", {}).get("selector", {}).get("matchLabels", {})
+    if not selector:
+        return False
+    return all(workload_labels.get(k) == v for k, v in selector.items())
+
+
+def check_pdb_coverage(doc, pdbs):
+    if doc.get("kind") not in HA_KINDS:
+        return []
+    workload_labels = doc.get("spec", {}).get("template", {}).get("metadata", {}).get("labels", {})
+    if any(pdb_matches(pdb, workload_labels) for pdb in pdbs):
+        return []
+    return ["no matching PodDisruptionBudget found"]
+
+
+def check_workload(doc, pdbs):
     findings = []
     pod_spec = doc["spec"]["template"]["spec"]
     kind = doc.get("kind")
@@ -72,6 +105,12 @@ def check_workload(doc):
                 findings.append((kind, name, cname, label, issue))
         for issue in check_security_context(pod_spec, container):
             findings.append((kind, name, cname, "security-context", issue))
+    for issue in check_replica_count(doc):
+        findings.append((kind, name, "-", "replica-count", issue))
+    for issue in check_anti_affinity(pod_spec):
+        findings.append((kind, name, "-", "anti-affinity", issue))
+    for issue in check_pdb_coverage(doc, pdbs):
+        findings.append((kind, name, "-", "pdb-coverage", issue))
     return findings
 
 
@@ -80,11 +119,12 @@ def main(path):
         docs = [d for d in yaml.safe_load_all(f) if d]
 
     workloads = [d for d in docs if d.get("kind") in WORKLOAD_KINDS]
+    pdbs = [d for d in docs if d.get("kind") == "PodDisruptionBudget"]
     if not workloads:
         print(f"no workload manifests (Deployment/StatefulSet/DaemonSet) found in {path}")
         return 1
 
-    findings = [f for doc in workloads for f in check_workload(doc)]
+    findings = [f for doc in workloads for f in check_workload(doc, pdbs)]
 
     if not findings:
         print(f"PASS: {len(workloads)} workload(s) checked, no anti-patterns found")

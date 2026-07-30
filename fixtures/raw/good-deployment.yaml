@@ -15,6 +15,13 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: payment-api
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: payment-api
           image: payment-api:1.4.2
@@ -37,3 +44,14 @@ spec:
               path: /healthz/ready
               port: 8080
             initialDelaySeconds: 5
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment-api

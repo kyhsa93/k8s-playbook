@@ -15,8 +15,8 @@ Each entry consists of three parts: the anti-pattern, its correct-pattern counte
 
 | # | Anti-Pattern | Correct Pattern | Harness Check | Status |
 |---|---|---|---|---|
-| 5 | critical service has replicas=1, no PodDisruptionBudget | replicas≥2 + a defined PodDisruptionBudget | check `replicas` value, look for a matching PDB resource | planned |
-| 6 | no pod anti-affinity, all replicas land on one node | `podAntiAffinity` spreads replicas across nodes/AZs | check for affinity field | planned |
+| 5 | critical service has replicas=1, no PodDisruptionBudget | replicas≥2 + a defined PodDisruptionBudget | check `replicas` value, look for a matching PDB resource (matched by selector labels) | implemented |
+| 6 | no pod anti-affinity, all replicas land on one node | `podAntiAffinity` spreads replicas across nodes/AZs | check for affinity field | implemented |
 
 ## 3. Configuration Management
 
