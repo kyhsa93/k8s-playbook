@@ -1,0 +1,8 @@
+# Typical per-env override on top of the real ingress-nginx chart values.yaml --
+# a team only ever touches a handful of the chart's ~345 parameterized fields.
+controller:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 90Mi

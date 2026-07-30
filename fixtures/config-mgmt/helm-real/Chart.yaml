@@ -1,0 +1,4 @@
+apiVersion: v2
+name: payment-api
+description: Minimal chart for validating check_config_mgmt.py env-parity against real Helm output
+version: 0.1.0

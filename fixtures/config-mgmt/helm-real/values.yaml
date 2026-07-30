@@ -1,0 +1,9 @@
+name: payment-api
+namespace: payment
+replicas: 1
+image:
+  repository: payment-api
+  tag: "1.4.2"
+apiUrl: https://payment-api.example.com
+ingress:
+  host: payment-api.example.com

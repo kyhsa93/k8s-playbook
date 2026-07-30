@@ -1,0 +1,4 @@
+replicas: 1
+apiUrl: https://dev.payment-api.example.com
+ingress:
+  host: dev.payment-api.example.com

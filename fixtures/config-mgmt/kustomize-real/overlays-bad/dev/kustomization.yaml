@@ -1,0 +1,9 @@
+# An overlay exists, but only adds a label -- it never actually patches the
+# environment-specific fields (host, API_URL), so they stay hardcoded from base.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+labels:
+  - pairs:
+      environment: dev

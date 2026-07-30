@@ -19,7 +19,8 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Genericity validated against real Argo CD/Flux/Kargo schemas and a real cluster (`scripts/verify-gitops-state.sh`) — this pass found and fixed 2 real bugs (see below)
 - [x] Config-management harness (`harness/check_config_mgmt.py`, catalog items 7-8: env-parity, values-file bloat) and Secrets harness (`harness/check_secrets.py`, catalog items 9-10: exposure, plaintext-in-Git), built against minimal fixtures (`scripts/verify-config-secrets.sh`)
 - [x] Namespace/Tenancy harness (`harness/check_namespace_tenancy.py`, catalog items 14-15: default-namespace usage, ClusterRoleBinding vs. namespace-scoped RoleBinding), built against minimal fixtures (`scripts/verify-namespace-tenancy.sh`) — all 15 catalog items now have a first-pass implementation
-- [ ] Validate items 7-10 and 14-15 against real Kustomize/Helm/RBAC genericity fixtures (same second pass already done for items 1-6 and 11-13)
+- [x] Config-management genericity validated (`scripts/verify-config-mgmt-genericity.sh`, closes issue #1) against a real Kustomize base+overlays, a real Helm chart, and a real public chart's values.yaml — no bugs found in the check logic itself, but it surfaced a real limitation (see below)
+- [ ] Secrets and Namespace/Tenancy genericity validation against real tooling (issues #2, #3)
 
 ## Usage
 
@@ -73,9 +74,29 @@ python3 harness/check_namespace_tenancy.py rbac fixtures/namespace-tenancy/rbac-
 
 # run all namespace/tenancy fixtures through the harness and assert the expected verdict
 scripts/verify-namespace-tenancy.sh
+
+# Config-management genericity: real kustomize/helm renders + a real public chart (closes issue #1)
+scripts/verify-config-mgmt-genericity.sh
 ```
 
 Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.
+
+### Config-management genericity validation (issue #1)
+
+- **env-parity (item 7)** was validated against a real Kustomize base + `overlays/{dev,staging,prod}`
+  (`fixtures/config-mgmt/kustomize-real/`, using JSON6902 `patches:`) and a real minimal Helm chart +
+  `values-{good,bad}-{dev,staging,prod}.yaml` (`fixtures/config-mgmt/helm-real/`). Both the "properly overridden"
+  and "overlay exists but never patches host/API_URL" cases gave the expected verdict on genuinely rendered
+  output — no bugs found in the check logic itself this round.
+- **values-bloat (item 8)** was validated against a real public chart: the actual
+  [ingress-nginx](https://github.com/kubernetes/ingress-nginx) `values.yaml`
+  (`fixtures/config-mgmt/values-bloat/real-world/values.yaml`, 345 parameterized leaf keys, 1275 lines) with
+  realistic per-env overrides (replica count, resources, autoscaling — 6 keys touched). The flattening/ratio
+  logic handled the real file's complexity (deep nesting, empty dicts/lists, comments) without any parsing bugs.
+  It did surface a real **limitation**, not a bug: the ratio metric can't distinguish a general-purpose,
+  widely-reused OSS chart (which is *supposed* to expose far more knobs than any one consumer uses) from an
+  in-house app chart that's bloated for no reason — both look identical to this check. The heuristic is only
+  reliable today for charts a team actually authors for its own services, not third-party/vendored charts.
 
 ### GitOps-state genericity validation
 
