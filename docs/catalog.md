@@ -44,8 +44,8 @@ Each entry consists of three parts: the anti-pattern, its correct-pattern counte
 
 | # | Anti-Pattern | Correct Pattern | Harness Check | Status |
 |---|---|---|---|---|
-| 14 | every workload lives in the `default` namespace | separate namespaces per team/environment | check whether `namespace` is `default` | planned |
-| 15 | no namespace-scoped RBAC, cluster-wide permissions granted instead | least-privilege Role/RoleBinding scoped to the namespace | check for ClusterRole(Binding) usage vs. namespace-scoped RBAC | planned |
+| 14 | every workload lives in the `default` namespace | separate namespaces per team/environment | check whether `namespace` is missing or `default` | implemented |
+| 15 | no namespace-scoped RBAC, cluster-wide permissions granted instead | least-privilege RoleBinding scoped to the namespace (a ClusterRole can still be referenced for reuse) | check for ClusterRoleBinding usage — the actual cluster-wide grant mechanism | implemented |
 
 ---
 

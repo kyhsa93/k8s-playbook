@@ -1,0 +1,20 @@
+# A ClusterRoleBinding grants "edit" cluster-wide, when payment-api only ever
+# needs permissions inside its own namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payment-api
+  namespace: payment
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: payment-api-edit
+subjects:
+  - kind: ServiceAccount
+    name: payment-api
+    namespace: payment
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io

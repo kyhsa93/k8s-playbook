@@ -18,7 +18,8 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] GitOps-state harness (`harness/check_gitops_state.py`, catalog items 11-13: drift, promotion gates, App-of-Apps/Kustomization-tree structure)
 - [x] Genericity validated against real Argo CD/Flux/Kargo schemas and a real cluster (`scripts/verify-gitops-state.sh`) — this pass found and fixed 2 real bugs (see below)
 - [x] Config-management harness (`harness/check_config_mgmt.py`, catalog items 7-8: env-parity, values-file bloat) and Secrets harness (`harness/check_secrets.py`, catalog items 9-10: exposure, plaintext-in-Git), built against minimal fixtures (`scripts/verify-config-secrets.sh`)
-- [ ] Validate items 7-10 against real Kustomize overlay / Helm values-file genericity, and item 14-15 (namespace/tenancy)
+- [x] Namespace/Tenancy harness (`harness/check_namespace_tenancy.py`, catalog items 14-15: default-namespace usage, ClusterRoleBinding vs. namespace-scoped RoleBinding), built against minimal fixtures (`scripts/verify-namespace-tenancy.sh`) — all 15 catalog items now have a first-pass implementation
+- [ ] Validate items 7-10 and 14-15 against real Kustomize/Helm/RBAC genericity fixtures (same second pass already done for items 1-6 and 11-13)
 
 ## Usage
 
@@ -63,6 +64,15 @@ python3 harness/check_secrets.py plaintext fixtures/secrets/plaintext-good.yaml 
 
 # run all config-mgmt/secrets fixtures through their harnesses and assert the expected verdict
 scripts/verify-config-secrets.sh
+
+# Namespace/Tenancy checks (catalog items 14-15)
+python3 harness/check_namespace_tenancy.py namespace fixtures/namespace-tenancy/namespace-bad.yaml   # exits 1
+python3 harness/check_namespace_tenancy.py namespace fixtures/namespace-tenancy/namespace-good.yaml  # exits 0
+python3 harness/check_namespace_tenancy.py rbac fixtures/namespace-tenancy/rbac-bad.yaml   # exits 1, ClusterRoleBinding
+python3 harness/check_namespace_tenancy.py rbac fixtures/namespace-tenancy/rbac-good.yaml  # exits 0, namespaced RoleBinding
+
+# run all namespace/tenancy fixtures through the harness and assert the expected verdict
+scripts/verify-namespace-tenancy.sh
 ```
 
 Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.

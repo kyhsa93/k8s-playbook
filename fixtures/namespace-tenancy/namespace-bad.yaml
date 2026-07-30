@@ -1,0 +1,30 @@
+# Everything lives in the default namespace -- one omits namespace entirely
+# (implicitly "default"), the other sets it explicitly.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-api:1.4.2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-api
+  namespace: default
+spec:
+  selector:
+    app: payment-api
+  ports:
+    - port: 8080

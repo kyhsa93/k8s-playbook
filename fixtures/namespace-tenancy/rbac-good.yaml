@@ -1,0 +1,23 @@
+# A namespace-scoped RoleBinding grants the same "edit" ClusterRole, but only
+# within the payment namespace -- reusing a ClusterRole via RoleBinding is a
+# legitimate way to avoid redefining the same permission set per namespace;
+# it's the *Binding* scope that matters, not whether a ClusterRole is referenced.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payment-api
+  namespace: payment
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payment-api-edit
+  namespace: payment
+subjects:
+  - kind: ServiceAccount
+    name: payment-api
+    namespace: payment
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
