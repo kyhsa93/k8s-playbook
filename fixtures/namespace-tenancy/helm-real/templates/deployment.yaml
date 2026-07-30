@@ -1,0 +1,21 @@
+# Uses the real Helm built-in .Release.Namespace, set by `helm install/template -n <ns>`
+# -- not a custom values field. If the caller never passes -n, Helm defaults it to
+# "default", which is exactly the anti-pattern item 14 is about.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-api:1.4.2

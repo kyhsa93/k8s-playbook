@@ -1,0 +1,4 @@
+apiVersion: v2
+name: payment-api
+description: Minimal chart for validating check_namespace_tenancy.py against real Helm .Release.Namespace behavior
+version: 0.1.0

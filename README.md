@@ -21,7 +21,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Namespace/Tenancy harness (`harness/check_namespace_tenancy.py`, catalog items 14-15: default-namespace usage, ClusterRoleBinding vs. namespace-scoped RoleBinding), built against minimal fixtures (`scripts/verify-namespace-tenancy.sh`) — all 15 catalog items now have a first-pass implementation
 - [x] Config-management genericity validated (`scripts/verify-config-mgmt-genericity.sh`, closes issue #1) against a real Kustomize base+overlays, a real Helm chart, and a real public chart's values.yaml — no bugs found in the check logic itself, but it surfaced a real limitation (see below)
 - [x] Secrets genericity validated (`scripts/verify-secrets-genericity.sh`, closes issue #2) against real Kustomize/Helm renders and real SealedSecret/ExternalSecret schemas — no bugs found
-- [ ] Namespace/Tenancy genericity validation against real tooling (issue #3)
+- [x] Namespace/Tenancy genericity validated (`scripts/verify-namespace-tenancy-genericity.sh`, closes issue #3) against real Kustomize/Helm namespace assignment and the real ingress-nginx chart's conditional RBAC scope templating — no bugs found. **All 15 catalog items are now both implemented and genericity-validated against real tooling.**
 
 ## Usage
 
@@ -81,9 +81,31 @@ scripts/verify-config-mgmt-genericity.sh
 
 # Secrets genericity: real kustomize/helm renders + real SealedSecret/ExternalSecret schemas (closes issue #2)
 scripts/verify-secrets-genericity.sh
+
+# Namespace/Tenancy genericity: real kustomize/helm namespace assignment + a real chart's RBAC scope toggle (closes issue #3)
+scripts/verify-namespace-tenancy-genericity.sh
 ```
 
 Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.
+
+### Namespace/Tenancy genericity validation (issue #3)
+
+- **namespace (item 14)** was validated against the real Kustomize `namespace:` transformer field
+  (`fixtures/namespace-tenancy/kustomize-real/`) and Helm's real `.Release.Namespace` built-in
+  (`fixtures/namespace-tenancy/helm-real/`, rendered with and without an explicit `-n` flag — Helm genuinely
+  defaults to `default` when it's omitted, which is exactly the anti-pattern). Both directions gave the
+  expected verdict, no bugs found.
+- **rbac (item 15)** was validated against the actual [ingress-nginx](https://github.com/kubernetes/ingress-nginx)
+  Helm chart (pulled via its real Helm repo), which has a genuine `rbac.scope`/`controller.scope.enabled` toggle
+  switching between cluster-wide RBAC (`ClusterRole`+`ClusterRoleBinding`, the chart's default) and
+  namespace-scoped RBAC (`Role`+`RoleBinding`). Both variants were rendered with real `helm template` and
+  committed as fixtures (`fixtures/namespace-tenancy/real-world/`). `check_rbac` correctly flags the
+  cluster-wide default and passes the namespace-scoped variant — confirming the ClusterRole-vs-ClusterRoleBinding
+  distinction the check relies on actually holds on a real, independently-authored chart, not just a fixture
+  built to match the heuristic.
+
+This closes the genericity-validation pass for every catalog item; all 15 items are now both implemented and
+validated against real tooling (issues #1, #2, #3 above; items 1-6 and 11-13 validated in earlier rounds).
 
 ### Secrets genericity validation (issue #2)
 

@@ -1,0 +1,109 @@
+# Genuine `helm template` output from the real ingress-nginx chart
+# (https://github.com/kubernetes/ingress-nginx, Apache 2.0), rendered with
+# --set rbac.scope=false (the chart's default: cluster-wide RBAC via
+# ClusterRole+ClusterRoleBinding). Not hand-written.
+---
+# Source: ingress-nginx/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.15.1
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.15.1"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+  name: test-ingress-nginx
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - nodes
+      - pods
+      - secrets
+      - namespaces
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses/status
+    verbs:
+      - update
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - list
+      - watch
+      - get
+---
+# Source: ingress-nginx/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.15.1
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/version: "1.15.1"
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/managed-by: Helm
+  name: test-ingress-nginx
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: test-ingress-nginx
+subjects:
+  - kind: ServiceAccount
+    name: test-ingress-nginx
+    namespace: payment

@@ -1,0 +1,7 @@
+# Real Kustomize `namespace:` transformer, but pointed at "default" --
+# still the anti-pattern even though it's expressed via a proper overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+resources:
+  - ../../base
