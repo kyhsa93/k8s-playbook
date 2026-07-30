@@ -1,52 +1,52 @@
-# 안티패턴 ↔ 정석 패턴 카탈로그
+# Anti-Pattern ↔ Correct Pattern Catalog
 
-각 항목은 (안티패턴, 정석 패턴, harness 검증 방법) 세 가지로 구성됩니다. harness는 가능한 한 **렌더링된 최종 K8s 오브젝트**를 기준으로 검사하도록 설계해, raw manifest / Kustomize / Helm 중 어떤 도구로 만들었는지와 무관하게 동작해야 합니다.
+Each entry consists of three parts: the anti-pattern, its correct-pattern counterpart, and how the harness verifies it. Wherever possible, the harness checks the **final rendered K8s object**, so it works the same whether the manifest came from raw YAML, Kustomize, or Helm.
 
-## 1. 워크로드 정의
+## 1. Workload Definition
 
-| # | 안티패턴 | 정석 패턴 | harness 검증 방법 |
-|---|---|---|---|
-| 1 | resource requests/limits 누락 | 워크로드 특성에 맞는 requests/limits 설정 (critical=Guaranteed QoS, 일반=Burstable) | 모든 container spec에 `resources.requests`/`limits` 존재 여부 파싱 |
-| 2 | 이미지 태그가 `:latest` 또는 태그 없음 | 불변 태그(semver 또는 digest)로 고정 | `image` 필드 regex로 `:latest`·태그 누락 탐지 |
-| 3 | liveness/readiness probe 누락, 또는 동일 엔드포인트로 두 probe를 겸용 | startup/liveness/readiness 역할 분리, 서로 다른 엔드포인트 사용 | probe 필드 존재 여부 + 엔드포인트 동일성 비교 |
-| 4 | 컨테이너를 root로 실행, `privileged: true` | `securityContext.runAsNonRoot: true` + 최소 권한 | securityContext 필드 파싱 |
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 1 | resource requests/limits missing | requests/limits sized for the workload (critical=Guaranteed QoS, general=Burstable) | parse every container spec for `resources.requests`/`limits` | implemented |
+| 2 | image tag is `:latest` or missing | pin an immutable tag (semver or digest) | regex the `image` field for `:latest` / missing tag | implemented |
+| 3 | liveness/readiness probe missing, or both probes share the same endpoint | separate startup/liveness/readiness roles with distinct endpoints | check probe fields exist + compare endpoints | implemented |
+| 4 | container runs as root, or `privileged: true` | `securityContext.runAsNonRoot: true` + least privilege | parse securityContext fields | implemented |
 
-## 2. 가용성 / HA
+## 2. Availability / HA
 
-| # | 안티패턴 | 정석 패턴 | harness 검증 방법 |
-|---|---|---|---|
-| 5 | 크리티컬 서비스 replica=1, PodDisruptionBudget 없음 | replicas≥2 + PodDisruptionBudget 정의 | `replicas` 값, PDB 리소스 존재 여부 |
-| 6 | pod anti-affinity 없어 전체 replica가 한 노드에 몰림 | `podAntiAffinity`로 노드/AZ 분산 | affinity 필드 존재 여부 |
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 5 | critical service has replicas=1, no PodDisruptionBudget | replicas≥2 + a defined PodDisruptionBudget | check `replicas` value, look for a matching PDB resource | planned |
+| 6 | no pod anti-affinity, all replicas land on one node | `podAntiAffinity` spreads replicas across nodes/AZs | check for affinity field | planned |
 
-## 3. 설정 관리
+## 3. Configuration Management
 
-| # | 안티패턴 | 정석 패턴 | harness 검증 방법 |
-|---|---|---|---|
-| 7 | 환경별 값(도메인, replica 수 등)이 base manifest에 하드코딩 | Base + Overlay(Kustomize) 또는 base chart + values-per-env(Helm)로 분리 | 여러 환경 렌더링 결과를 diff해, base 자체에 환경 고유값이 박혀있는지 휴리스틱 탐지 |
-| 8 | Helm values.yaml이 모든 필드를 파라미터화해 복잡도 폭발("God values file") | 실제로 환경마다 달라지는 값만 파라미터화, 나머지는 chart에 고정 | values.yaml 스키마 크기 대비 실제 환경별 오버라이드 비율 측정 |
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 7 | environment-specific values (domain, replica count, etc.) hardcoded into the base manifest | Base + Overlay (Kustomize) or base chart + per-env values (Helm) | diff renders across environments; flag env-specific values baked into the base | planned |
+| 8 | Helm `values.yaml` parameterizes every field, causing complexity blowup ("god values file") | only parameterize values that actually vary per environment | measure values.yaml schema size vs. actual per-env override ratio | planned |
 
-## 4. 시크릿
+## 4. Secrets
 
-| # | 안티패턴 | 정석 패턴 | harness 검증 방법 |
-|---|---|---|---|
-| 9 | 시크릿 값이 ConfigMap 또는 평문 env로 노출 | `Secret` 리소스 참조(`secretKeyRef`/`envFrom`) 사용 | ConfigMap/env 값에 password·token·key 등 시크릿스러운 키워드 패턴 탐지 |
-| 10 | 평문 시크릿이 Git repo에 커밋됨 | Sealed Secrets/External Secrets Operator 등으로 암호화된 형태만 커밋 | Git repo 내 평문 Secret 매니페스트 존재 여부 스캔 |
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 9 | secret values exposed via ConfigMap or plain env vars | reference a `Secret` resource (`secretKeyRef`/`envFrom`) | scan ConfigMap/env values for secret-like keywords (password, token, key) | planned |
+| 10 | plaintext secrets committed to the Git repo | commit only encrypted forms (Sealed Secrets, External Secrets Operator, etc.) | scan the repo for plaintext Secret manifests | planned |
 
-## 5. 배포 / 동기화 (GitOps)
+## 5. Deployment / Sync (GitOps)
 
-| # | 안티패턴 | 정석 패턴 | harness 검증 방법 |
-|---|---|---|---|
-| 11 | GitOps 컨트롤러 운용 중에 수동 `kubectl apply` 병행 | 모든 변경은 Git 커밋을 거쳐 컨트롤러가 반영, 직접 클러스터 수정 금지 | 클러스터 실제 상태 vs Git 선언 상태 diff — drift 존재 자체가 위반의 흔적 |
-| 12 | 검증 게이트 없이 dev 변경이 바로 prod에 반영 | dev→staging→prod 단계별 헬스체크/테스트 통과 후 승격 (예: Kargo) | Stage 정의에 verification 조건 존재 여부 |
-| 13 | 개별 애플리케이션을 하나하나 수동 등록/관리 | App of Apps(Argo CD) / Kustomization 트리(Flux)로 선언적 관리 | 루트 앱 정의 존재 여부, 하위 앱이 전부 그 트리 안에 포함되는지 |
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 11 | manual `kubectl apply` used alongside a running GitOps controller | every change goes through a Git commit; no direct cluster edits | diff live cluster state vs. declared Git state — any drift is evidence of the violation | planned |
+| 12 | a dev change reaches prod with no verification gate | promote through dev→staging→prod with health checks/tests at each stage (e.g., Kargo) | check that each Stage definition has verification conditions | planned |
+| 13 | applications registered and managed one by one, by hand | manage declaratively via App of Apps (Argo CD) / a Kustomization tree (Flux) | check for a root app definition and that all child apps live under it | planned |
 
-## 6. 네임스페이스 / 테넌시
+## 6. Namespace / Tenancy
 
-| # | 안티패턴 | 정석 패턴 | harness 검증 방법 |
-|---|---|---|---|
-| 14 | 모든 워크로드가 `default` 네임스페이스에 배치 | 팀/환경 단위로 네임스페이스 분리 | `namespace` 필드가 `default`인지 확인 |
-| 15 | 네임스페이스 단위 RBAC 없음, 전체 클러스터 권한 부여 | 네임스페이스 스코프 Role/RoleBinding으로 최소 권한 부여 | ClusterRole(Binding) 사용 여부, 네임스페이스 스코프 RBAC 존재 여부 |
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 14 | every workload lives in the `default` namespace | separate namespaces per team/environment | check whether `namespace` is `default` | planned |
+| 15 | no namespace-scoped RBAC, cluster-wide permissions granted instead | least-privilege Role/RoleBinding scoped to the namespace | check for ClusterRole(Binding) usage vs. namespace-scoped RBAC | planned |
 
 ---
 
-이 카탈로그는 최소 fixture(raw manifest)에서 harness를 먼저 구현할 때의 체크리스트로 사용하고, 이후 Kustomize/Helm/Argo CD/Flux를 fixture로 추가하면서 각 항목이 도구와 무관하게 동일하게 탐지되는지 검증합니다.
+Use this catalog as the checklist for building the harness against the minimal fixture (raw manifest) first. As Kustomize/Helm/Argo CD/Flux fixtures are added, re-run the same checklist to confirm each item is detected identically regardless of tool.
