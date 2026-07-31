@@ -1,0 +1,30 @@
+# Fixed "existing state" context for the item-13 (apps) benchmark task.
+#
+# check_apps judges tree membership across the *whole* set of app resources it's
+# given, not the new one specifically -- so if this context already contained a
+# valid tree signal on its own (e.g. an Argo CD directory.recurse root, or two
+# siblings that already dependsOn each other), the check would trivially PASS
+# once concatenated with anything the agent adds, regardless of whether the
+# agent's own contribution was correct. To make item 13 actually testable, this
+# context is deliberately just ONE Flux Kustomization with no dependsOn of its
+# own -- by itself (or combined with an agent submission that ignores it) the
+# combined set has no tree signal at all (a single dependsOn-less Kustomization,
+# or two Kustomizations with still no dependsOn between them, both FAIL). The
+# only way to reach PASS is for the agent's new Kustomization to declare
+# `dependsOn: [{name: infra}]`, correctly joining this existing app the same way
+# fixtures/gitops/apps/good-flux-dependson.yaml's payment-api/order-api do.
+#
+# scripts/score.sh's third (apps-registration) argument is concatenated with
+# this file before being scored -- the agent only ever has to author its own
+# new Kustomization, never told to reproduce this file.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra
+  namespace: flux-system
+spec:
+  path: ./infra
+  sourceRef:
+    kind: GitRepository
+    name: gitops-repo
+  interval: 10m

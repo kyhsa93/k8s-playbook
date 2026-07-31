@@ -2,27 +2,30 @@
 # Aggregate scorer for the AI manifest-authoring benchmark (docs/benchmark.md).
 # Runs every catalog check that can be scored from a single rendered manifest
 # snapshot (items 1-6, 9, 10, 14-19), plus item 12 if a Kargo Stage pipeline
-# file is also given, against one submission and reports a combined
-# PASS/FAIL/N-A result. Unlike scripts/verify-*.sh (which assert known
-# fixtures pass/fail), this scores an arbitrary new manifest -- deliberately not
-# wired into scripts/verify-all.sh.
+# file is also given, plus item 13 if a new app-registration file is also
+# given, against one submission and reports a combined PASS/FAIL/N-A result.
+# Unlike scripts/verify-*.sh (which assert known fixtures pass/fail), this
+# scores an arbitrary new manifest -- deliberately not wired into
+# scripts/verify-all.sh.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "usage: score.sh <manifest.yaml|-> [promotion-pipeline.yaml]" >&2
+if [ $# -lt 1 ] || [ $# -gt 3 ]; then
+  echo "usage: score.sh <manifest.yaml|-> [promotion-pipeline.yaml] [apps-registration.yaml]" >&2
   exit 2
 fi
 
 file="$1"
 promotion_file="${2:-}"
+apps_file="${3:-}"
 tmpinput=""
+apps_combined=""
 if [ "$file" = "-" ]; then
   tmpinput="$(mktemp)"
   cat > "$tmpinput"
   file="$tmpinput"
 fi
-trap '[ -n "$tmpinput" ] && rm -f "$tmpinput"' EXIT
+trap '[ -n "$tmpinput" ] && rm -f "$tmpinput"; [ -n "$apps_combined" ] && rm -f "$apps_combined"' EXIT
 
 passed=0
 failed=0
@@ -62,6 +65,16 @@ score "hpa-minmax (item 19)"        python3 harness/check_autoscaling.py minmax 
 
 if [ -n "$promotion_file" ]; then
   score "promotion (item 12)"       python3 harness/check_gitops_state.py promotion "$promotion_file"
+fi
+
+if [ -n "$apps_file" ]; then
+  # check_apps judges tree membership across the whole set it's given, not the
+  # new app specifically -- fixtures/benchmark/apps-context.yaml is deliberately
+  # a single dependsOn-less Kustomization so PASS only happens if the agent's
+  # own new resource correctly joins it (see that file's own comment).
+  apps_combined="$(mktemp)"
+  { cat fixtures/benchmark/apps-context.yaml; echo "---"; cat "$apps_file"; } > "$apps_combined"
+  score "apps (item 13)"             python3 harness/check_gitops_state.py apps "$apps_combined"
 fi
 
 applicable=$((passed + failed))
