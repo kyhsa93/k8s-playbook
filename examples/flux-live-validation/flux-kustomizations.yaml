@@ -1,0 +1,57 @@
+# Applied directly to a disposable cluster after `flux install` -- not part of a
+# `flux bootstrap` sync. One GitRepository source pointed at this repo, plus a
+# root "infra" Kustomization and two dependents that declare a real spec.dependsOn
+# on it, mirroring the classic Kustomization-tree structure catalog item 13 checks for.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: k8s-playbook
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/kyhsa93/k8s-playbook.git
+  ref:
+    branch: main
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra
+  namespace: flux-system
+spec:
+  interval: 1m
+  path: ./examples/flux-live-validation/workloads/infra
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: k8s-playbook
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: payment-api
+  namespace: flux-system
+spec:
+  interval: 1m
+  path: ./examples/flux-live-validation/workloads/payment-api
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: k8s-playbook
+  dependsOn:
+    - name: infra
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: order-api
+  namespace: flux-system
+spec:
+  interval: 1m
+  path: ./examples/flux-live-validation/workloads/order-api
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: k8s-playbook
+  dependsOn:
+    - name: infra

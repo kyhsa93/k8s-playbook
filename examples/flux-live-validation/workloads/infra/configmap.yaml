@@ -1,0 +1,9 @@
+# Trivial resource -- content doesn't matter, only used to give a real
+# kustomize-controller something to reconcile for the "infra" Kustomization
+# that payment-api/order-api depend on.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared-infra-config
+data:
+  note: placeholder
