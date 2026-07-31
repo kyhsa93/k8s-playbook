@@ -15,11 +15,13 @@ A typical coding benchmark asks "does it pass the tests." This benchmark asks a 
 | v1 | 1-6, 9-10, 14-19 (9 items) | one rendered manifest snapshot | shipped |
 | v2 | + 12 (promotion) | v1's manifest + an optional second file, a Kargo `Stage` pipeline (`scripts/score.sh <manifest.yaml> [promotion-pipeline.yaml]`) | shipped |
 | v3 | + 13 (apps) | v2's submission + a new app-registration file (`scripts/score.sh <manifest.yaml> [promotion-pipeline.yaml] [apps-registration.yaml]`), scored against `fixtures/benchmark/apps-context.yaml` as fixed pre-existing context | shipped |
-| v4 | + 7-8 (config-mgmt) | a Kustomize base+overlays or Helm chart+per-env values directory, not a single manifest at all | scoped, not implemented |
+| v4 | + 7-8 (config-mgmt) | `--config <dir>`, a directory instead of a file — either a Helm chart (`Chart.yaml` + `values.yaml` + `values-{dev,staging,prod}.yaml`) or a Kustomize base+overlays tree (`overlays/{dev,staging,prod}/`) | shipped |
 
 **v3's design wrinkle, worth understanding before using it**: `check_apps` judges App-of-Apps/tree membership across the *whole* set of app resources it's handed, not the new one specifically. If the task simply handed the agent an existing tree that already satisfied the check on its own (e.g. an Argo CD `directory.recurse` root, whose children carry no distinguishing signal at all — see this repo's own live-Argo-CD/Flux findings above), the score would trivially PASS regardless of whether the agent's contribution was correct or even present. `fixtures/benchmark/apps-context.yaml` sidesteps this by being a single Flux `Kustomization` with no `dependsOn` of its own — by itself, or combined with a submission that ignores it, the set has zero tree signal. The only way to PASS is for the agent's new `Kustomization` to declare `dependsOn: [{name: infra}]`, correctly joining that existing resource — see the comment in that fixture for the full reasoning.
 
-**Item 11 (drift) is permanently out of scope for this benchmark, not a future version.** Drift is a live-cluster-vs-Git divergence signal — it only exists when someone (or something) changes a running cluster out-of-band *after* a manifest was authored and applied. An authoring benchmark scores what an agent writes; it structurally cannot produce or avoid drift, so there is no version of this benchmark that could ever score item 11. The ceiling for this benchmark, once v4 is built, is **18/19 applicable items**, not 19/19 — v1-v3 already cover 12 of those 18.
+**v4's Kustomize path only scores item 7, not item 8** — `values-bloat` measures a Helm `values.yaml` schema's parameter surface against its actual per-env override ratio, which has no Kustomize equivalent (there's no analogous single schema file to measure); a Kustomize `--config` submission is scored on item 7 alone, same asymmetry as an internal-only workload leaving item 17 (ingress TLS) `[N/A]`.
+
+**Item 11 (drift) is permanently out of scope for this benchmark, not a future version.** Drift is a live-cluster-vs-Git divergence signal — it only exists when someone (or something) changes a running cluster out-of-band *after* a manifest was authored and applied. An authoring benchmark scores what an agent writes; it structurally cannot produce or avoid drift, so there is no version of this benchmark that could ever score item 11. **All four versions are now shipped — the ceiling for this benchmark is 18/19 applicable items, never 19/19.**
 
 ## Task format
 
@@ -38,7 +40,10 @@ helm template <chart> | scripts/score.sh -
 scripts/score.sh <manifest.yaml> <promotion-pipeline.yaml>    # v2: also score item 12 (Kargo Stage pipeline)
 scripts/score.sh <manifest.yaml> <promotion.yaml> <apps.yaml> # v3: also score item 13 (new app joins fixtures/benchmark/apps-context.yaml)
 scripts/score.sh <manifest.yaml> "" <apps.yaml>               # v3 without a promotion pipeline: pass an empty string to skip item 12
+scripts/score.sh <manifest.yaml> --config <dir>               # v4: also score items 7-8 (or just 7, for a Kustomize dir) from a Helm chart or Kustomize base+overlays tree
 ```
+
+`--config` can appear anywhere in the invocation (it's parsed out before the positional `<manifest.yaml>`/`<promotion.yaml>`/`<apps.yaml>` are read), so all four versions' extras can be combined in one call if a task is designed to exercise more than one at once.
 
 - **Output**: one `[PASS]`/`[FAIL]`/`[N/A]` line per scoring unit, plus a summary
   (`Score: X/Y applicable checks passed (Z N/A excluded)`). A unit is `[N/A]`, not a
@@ -144,16 +149,15 @@ model is being evaluated or how the two scores compare.
 
 ## How to extend this
 
-- **v4 (items 7-8, config-mgmt)**: change the submission shape entirely — a Kustomize
-  base+overlays or Helm chart+per-env values directory instead of one file. `scripts/score.sh`
-  would need a directory-aware invocation (render each env with `kustomize build`/`helm
-  template` before handing the result to `check_config_mgmt.py env-parity`/`values-bloat`),
-  which is a bigger change than v2/v3's optional-extra-file pattern.
+All 18 scoreable catalog items (everything except the permanently-excluded item 11) now
+have a `scripts/score.sh` path. What's left is task design, not scorer capability:
+
 - **A task suite by difficulty**: so far every run has asked for one workload's worth of
   hygiene (v1), hygiene + a promotion pipeline (v2), or hygiene + promotion + App-of-Apps
-  registration (v3). Once v4 exists too, a harder level could combine all of them in one
-  task — a new workload needing hygiene, a promotion pipeline, tree registration, and
-  per-env overlays at once.
+  registration (v3). A harder level could combine all four extras in one task — a new
+  workload needing hygiene, a promotion pipeline, tree registration, and per-env
+  Kustomize/Helm overlays all at once, scored with a single `scripts/score.sh <manifest>
+  <promotion> <apps> --config <dir>` call.
 - **Comparing across models**: run the identical task prompt with a different model and
   compare the independently-reverified scores — mirrors
   [backend-service-playbook's benchmark](https://github.com/kyhsa93/backend-service-playbook/blob/main/docs/benchmark.md)

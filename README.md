@@ -306,8 +306,10 @@ that follow this repo's documented conventions for a workload it's never seen be
 - [x] Sonnet-vs-Haiku model comparison run (`shipment-tracker-api`): tied 9/9 on the v2 scorer, but manual
   review found real quality gaps neither model's harness score revealed — see
   [docs/benchmark.md](docs/benchmark.md)'s model-comparison section
-- [ ] Benchmark v4 (items 7-8, config-mgmt) and item 11 (drift, permanently out of scope) — see
-  [docs/benchmark.md](docs/benchmark.md)'s Scope section for the full roadmap and why
+- [x] Benchmark v4: `scripts/score.sh --config <dir>` scores items 7-8 (or just item 7 for a
+  Kustomize submission) from a Helm chart or Kustomize base+overlays directory. **All 18
+  scoreable catalog items now have a scoring path** — item 11 (drift) is permanently out of
+  scope, see [docs/benchmark.md](docs/benchmark.md)'s Scope section for why
 
 ## License
 
