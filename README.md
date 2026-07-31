@@ -27,6 +27,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] `scripts/verify-all.sh` runs every verification script with one command, wired into CI (`.github/workflows/verify.yml`) on every push/PR to `main`
 - [x] `apps` (item 13) validated against a genuinely reconciling Argo CD controller — not just schemas/docs (`scripts/verify-live-argocd.sh`) — found and fixed a real bug affecting all 5 harnesses, and documented a real usage caveat (see below)
 - [x] Two new catalog categories: Networking harness (`harness/check_networking.py`, catalog items 16-17: NetworkPolicy coverage, Ingress TLS) and Autoscaling/Capacity harness (`harness/check_autoscaling.py`, catalog items 18-19: HPA target resource requests, HPA min/max range), built against minimal fixtures (`scripts/verify-networking.sh`, `scripts/verify-autoscaling.sh`) and genericity-validated (`scripts/verify-networking-genericity.sh`, `scripts/verify-autoscaling-genericity.sh`) against real Kustomize/Helm renders and the real `ingress-nginx` chart's `networkPolicy`/`autoscaling` toggles — no bugs found. **All 19 catalog items are now implemented and genericity-validated.**
+- [x] `apps` (item 13)'s `has_flux_dependency_tree` signal validated against a genuinely reconciling Flux v2 controller, not just the CRD schema (`scripts/verify-live-flux.sh`) — no bugs found in the check logic, but confirmed the same root-exclusion caveat already documented for Argo CD also applies to Flux's `dependsOn` tree (see below). Kargo live validation still out of scope.
 
 ## Setup
 
@@ -127,16 +128,41 @@ scripts/verify-autoscaling.sh
 # chart's networkPolicy/autoscaling toggles
 scripts/verify-networking-genericity.sh
 scripts/verify-autoscaling-genericity.sh
+
+# apps (item 13)'s has_flux_dependency_tree signal against a genuinely reconciling Flux controller
+scripts/verify-live-flux.sh
 ```
 
 See [Setup](#setup) above for `kustomize`/`helm`/PyYAML requirements.
+
+### Live Flux genericity validation for `apps` (item 13)
+
+Follow-up to the Argo CD live round below, closing the Flux half of the gap it left open (Kargo live-controller
+testing is still out of scope).
+
+**Setup:** a disposable kind cluster ran a real `flux install` (core controllers only, no `flux bootstrap`/Git
+write access needed), then a `GitRepository` pointed at this repo's `main` branch plus a root `infra`
+Kustomization and two dependents (`payment-api`, `order-api`) declaring a real `spec.dependsOn: [{name: infra}]`
+were applied directly — see `examples/flux-live-validation/`.
+
+**What it found:**
+- **No bug in the check logic.** `has_flux_dependency_tree()`'s core assumption — that `spec.dependsOn` is the
+  only real signal and kustomize-controller never stamps `ownerReferences` on a Kustomization it didn't
+  generate — held exactly as written against a genuinely reconciling controller.
+- **The same root-exclusion caveat already documented for Argo CD also applies here.** If the root `infra`
+  Kustomization is excluded from what you feed `check_apps` (e.g. you only queried the Kustomizations your own
+  team owns), `payment-api`/`order-api` still list `dependsOn: [{name: infra}]`, but the check has no way to
+  confirm `infra` is a legitimately-managed dependency versus a name that happens to not exist — it reports
+  FAIL either way. `fixtures/gitops/apps/live-flux-dependson-children-only.yaml` captures exactly this case and
+  is asserted to fail on purpose — always include every Kustomization in the tree, not just the ones you own,
+  when auditing whether a set of apps is under a dependsOn tree.
 
 ### Live Argo CD genericity validation for `apps` (item 13)
 
 Every other GitOps-state check was validated against real schemas/docs or a real cluster's API server, but
 `apps` had only ever been checked against documentation of how Argo CD/Flux/ApplicationSet behave — never a
-genuinely reconciling controller. This round closed that gap, scoped to Argo CD only (Flux/Kargo live-controller
-testing is a heavier lift, left for later if picked up).
+genuinely reconciling controller. This round closed that gap, scoped to Argo CD only (Flux was closed in a
+follow-up round, see above; Kargo live-controller testing is still out of scope).
 
 **Setup:** a disposable kind cluster ran a real Argo CD install (`argoproj/argo-cd` `stable` manifests — the
 `applicationsets.argoproj.io` CRD is large enough that plain `kubectl apply` hits etcd's annotation size limit,

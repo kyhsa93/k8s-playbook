@@ -1,0 +1,110 @@
+# Same live Flux capture, but with the root infra Kustomization excluded --
+# only payment-api and order-api queried. Asserted to FAIL on purpose: even though
+# both genuinely depend on infra (spec.dependsOn: [{name: infra}]), the check can't
+# tell that from names alone unless the referenced dependency is included in the
+# input -- same caveat already documented for Argo CD's App-of-Apps root exclusion.
+# Always include every Kustomization in the tree, not just the ones you happen to
+# own, when auditing whether a set of apps is under a dependsOn tree.
+apiVersion: v1
+items:
+- apiVersion: kustomize.toolkit.fluxcd.io/v1
+  kind: Kustomization
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"kustomize.toolkit.fluxcd.io/v1","kind":"Kustomization","metadata":{"annotations":{},"name":"payment-api","namespace":"flux-system"},"spec":{"dependsOn":[{"name":"infra"}],"interval":"1m","path":"./examples/flux-live-validation/workloads/payment-api","prune":true,"sourceRef":{"kind":"GitRepository","name":"k8s-playbook"},"targetNamespace":"default"}}
+    creationTimestamp: "2026-07-31T06:40:41Z"
+    finalizers:
+    - finalizers.fluxcd.io
+    generation: 2
+    name: payment-api
+    namespace: flux-system
+    resourceVersion: "16214"
+    uid: f6f0ebf9-5765-420c-a65a-f5edc770ac54
+  spec:
+    dependsOn:
+    - name: infra
+    force: false
+    interval: 1m
+    path: ./examples/flux-live-validation/workloads/payment-api
+    prune: true
+    sourceRef:
+      kind: GitRepository
+      name: k8s-playbook
+    targetNamespace: default
+  status:
+    conditions:
+    - lastTransitionTime: "2026-07-31T07:57:14Z"
+      message: 'Applied revision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256'
+      observedGeneration: 2
+      reason: ReconciliationSucceeded
+      status: "True"
+      type: Ready
+    history:
+    - digest: sha256:e74d0dac528e65614dde8b4ebf01da0142d132ab05497b18fef209b596064e76
+      firstReconciled: "2026-07-31T06:41:54Z"
+      lastReconciled: "2026-07-31T07:57:14Z"
+      lastReconciledDuration: 89.950158ms
+      lastReconciledStatus: ReconciliationSucceeded
+      metadata:
+        revision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256
+      totalReconciliations: 76
+    inventory:
+      entries:
+      - id: default_payment-api_apps_Deployment
+        v: v1
+    lastAppliedRevision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256
+    lastAttemptedRevision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256
+    observedGeneration: 2
+- apiVersion: kustomize.toolkit.fluxcd.io/v1
+  kind: Kustomization
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"kustomize.toolkit.fluxcd.io/v1","kind":"Kustomization","metadata":{"annotations":{},"name":"order-api","namespace":"flux-system"},"spec":{"dependsOn":[{"name":"infra"}],"interval":"1m","path":"./examples/flux-live-validation/workloads/order-api","prune":true,"sourceRef":{"kind":"GitRepository","name":"k8s-playbook"},"targetNamespace":"default"}}
+    creationTimestamp: "2026-07-31T06:40:41Z"
+    finalizers:
+    - finalizers.fluxcd.io
+    generation: 2
+    name: order-api
+    namespace: flux-system
+    resourceVersion: "16289"
+    uid: be2d973b-9ddc-465e-8a30-12b58fbb3bfd
+  spec:
+    dependsOn:
+    - name: infra
+    force: false
+    interval: 1m
+    path: ./examples/flux-live-validation/workloads/order-api
+    prune: true
+    sourceRef:
+      kind: GitRepository
+      name: k8s-playbook
+    targetNamespace: default
+  status:
+    conditions:
+    - lastTransitionTime: "2026-07-31T07:57:35Z"
+      message: 'Applied revision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256'
+      observedGeneration: 2
+      reason: ReconciliationSucceeded
+      status: "True"
+      type: Ready
+    history:
+    - digest: sha256:f4b0034183eafb02f1a4bc2fa026f35f14cafd6e8e031f01d342b0c04d532bb7
+      firstReconciled: "2026-07-31T06:41:54Z"
+      lastReconciled: "2026-07-31T07:57:35Z"
+      lastReconciledDuration: 97.867543ms
+      lastReconciledStatus: ReconciliationSucceeded
+      metadata:
+        revision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256
+      totalReconciliations: 77
+    inventory:
+      entries:
+      - id: default_order-api_apps_Deployment
+        v: v1
+    lastAppliedRevision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256
+    lastAttemptedRevision: main@sha1:33338f06861b392d90d649506d1a68b8b4e36256
+    observedGeneration: 2
+kind: List
+metadata:
+  resourceVersion: ""

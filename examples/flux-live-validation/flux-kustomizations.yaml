@@ -22,6 +22,7 @@ spec:
   interval: 1m
   path: ./examples/flux-live-validation/workloads/infra
   prune: true
+  targetNamespace: default
   sourceRef:
     kind: GitRepository
     name: k8s-playbook
@@ -35,6 +36,7 @@ spec:
   interval: 1m
   path: ./examples/flux-live-validation/workloads/payment-api
   prune: true
+  targetNamespace: default
   sourceRef:
     kind: GitRepository
     name: k8s-playbook
@@ -50,6 +52,7 @@ spec:
   interval: 1m
   path: ./examples/flux-live-validation/workloads/order-api
   prune: true
+  targetNamespace: default
   sourceRef:
     kind: GitRepository
     name: k8s-playbook

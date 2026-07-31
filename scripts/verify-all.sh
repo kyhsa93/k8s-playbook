@@ -18,6 +18,7 @@ SCRIPTS=(
   scripts/verify-networking-genericity.sh
   scripts/verify-autoscaling.sh
   scripts/verify-autoscaling-genericity.sh
+  scripts/verify-live-flux.sh
 )
 
 overall=0
