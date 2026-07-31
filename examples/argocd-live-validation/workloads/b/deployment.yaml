@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workload-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workload-b
+  template:
+    metadata:
+      labels:
+        app: workload-b
+    spec:
+      containers:
+        - name: workload-b
+          image: registry.k8s.io/pause:3.9

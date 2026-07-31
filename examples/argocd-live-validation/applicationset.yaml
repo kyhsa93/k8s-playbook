@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: live-validation
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - name: a
+          - name: b
+  template:
+    metadata:
+      name: "appset-workload-{{name}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kyhsa93/k8s-playbook.git
+        path: "examples/argocd-live-validation/workloads/{{name}}"
+        targetRevision: HEAD
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "argocd-live-appset-{{name}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
