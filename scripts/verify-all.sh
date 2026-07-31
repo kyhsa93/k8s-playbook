@@ -19,6 +19,7 @@ SCRIPTS=(
   scripts/verify-autoscaling.sh
   scripts/verify-autoscaling-genericity.sh
   scripts/verify-live-flux.sh
+  scripts/verify-live-kargo.sh
 )
 
 overall=0

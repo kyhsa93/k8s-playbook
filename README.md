@@ -27,7 +27,8 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] `scripts/verify-all.sh` runs every verification script with one command, wired into CI (`.github/workflows/verify.yml`) on every push/PR to `main`
 - [x] `apps` (item 13) validated against a genuinely reconciling Argo CD controller — not just schemas/docs (`scripts/verify-live-argocd.sh`) — found and fixed a real bug affecting all 5 harnesses, and documented a real usage caveat (see below)
 - [x] Two new catalog categories: Networking harness (`harness/check_networking.py`, catalog items 16-17: NetworkPolicy coverage, Ingress TLS) and Autoscaling/Capacity harness (`harness/check_autoscaling.py`, catalog items 18-19: HPA target resource requests, HPA min/max range), built against minimal fixtures (`scripts/verify-networking.sh`, `scripts/verify-autoscaling.sh`) and genericity-validated (`scripts/verify-networking-genericity.sh`, `scripts/verify-autoscaling-genericity.sh`) against real Kustomize/Helm renders and the real `ingress-nginx` chart's `networkPolicy`/`autoscaling` toggles — no bugs found. **All 19 catalog items are now implemented and genericity-validated.**
-- [x] `apps` (item 13)'s `has_flux_dependency_tree` signal validated against a genuinely reconciling Flux v2 controller, not just the CRD schema (`scripts/verify-live-flux.sh`) — no bugs found in the check logic, but confirmed the same root-exclusion caveat already documented for Argo CD also applies to Flux's `dependsOn` tree (see below). Kargo live validation still out of scope.
+- [x] `apps` (item 13)'s `has_flux_dependency_tree` signal validated against a genuinely reconciling Flux v2 controller, not just the CRD schema (`scripts/verify-live-flux.sh`) — no bugs found in the check logic, but confirmed the same root-exclusion caveat already documented for Argo CD also applies to Flux's `dependsOn` tree (see below).
+- [x] `promotion` (item 12) validated against a genuinely admitting Kargo v1.11.0 controller, not just its documented `Stage` CRD schema (`scripts/verify-live-kargo.sh`) — a real `Warehouse` subscribed to this repo's Git commits and produced a genuine `Freight` object; no bugs found. **Live-controller validation for `apps`/`promotion` is now closed across all three GitOps tools this catalog covers (Argo CD, Flux, Kargo).**
 
 ## Setup
 
@@ -131,9 +132,33 @@ scripts/verify-autoscaling-genericity.sh
 
 # apps (item 13)'s has_flux_dependency_tree signal against a genuinely reconciling Flux controller
 scripts/verify-live-flux.sh
+
+# promotion (item 12) against a genuinely admitting Kargo controller
+scripts/verify-live-kargo.sh
 ```
 
 See [Setup](#setup) above for `kustomize`/`helm`/PyYAML requirements.
+
+### Live Kargo genericity validation for `promotion` (item 12)
+
+Closes the last open live-controller gap: `promotion` had only ever been checked against Kargo's documented
+`Stage` CRD schema, never a genuinely admitting API server.
+
+**Setup:** a disposable kind cluster ran cert-manager (a hard dependency of Kargo's webhook TLS) and the real
+Kargo Helm chart (`oci://ghcr.io/akuity/kargo-charts/kargo` v1.11.0). A `Project` (`kargo-payment`), a
+`Warehouse` subscribing to this repo's `main` branch commits, and the same dev/staging/prod `Stage` pipeline as
+`fixtures/gitops/promotion/good.yaml` were applied directly — see `examples/kargo-live-validation/`.
+
+**What it found:**
+- **No bug in the check logic.** The Warehouse genuinely discovered a commit and produced a real `Freight`
+  object; all three Stages were admitted by the real API server with the exact schema this repo had already
+  written from Kargo's docs (`origin.kind`/`name`, `sources.direct`/`stages`,
+  `verification.analysisTemplates[].name`) — no schema drift found.
+  `fixtures/gitops/promotion/live-kargo-full.yaml` is that live capture.
+- **The anti-pattern is still caught live.** Removing `prod`'s `spec.verification` via a genuine
+  `kubectl patch` and re-capturing reproduces the exact FAIL this check is meant to catch
+  (`fixtures/gitops/promotion/live-kargo-no-gate.yaml`) — confirming the check reacts to a real admitting
+  server's state, not just a hand-edited fixture.
 
 ### Live Flux genericity validation for `apps` (item 13)
 

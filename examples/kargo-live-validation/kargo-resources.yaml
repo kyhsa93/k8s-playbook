@@ -1,0 +1,67 @@
+# Applied directly to a disposable cluster after installing the real Kargo Helm
+# chart (oci://ghcr.io/akuity/kargo-charts/kargo) and cert-manager (a hard
+# dependency of Kargo's webhook TLS). A Project (cluster-scoped, creates the
+# "kargo-payment" namespace), a Warehouse subscribing to this repo's Git commits,
+# and the same dev/staging/prod Stage pipeline as fixtures/gitops/promotion/good.yaml,
+# to validate catalog item 12's check_promotion against a real admitting API server.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-payment
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: payment-api
+  namespace: kargo-payment
+spec:
+  subscriptions:
+    - git:
+        repoURL: https://github.com/kyhsa93/k8s-playbook.git
+        branch: main
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: kargo-payment
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: payment-api
+      sources:
+        direct: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: kargo-payment
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: payment-api
+      sources:
+        stages: [dev]
+  verification:
+    analysisTemplates:
+      - name: integration-tests
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-payment
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: payment-api
+      sources:
+        stages: [staging]
+  verification:
+    analysisTemplates:
+      - name: smoke-test
+      - name: health-check
