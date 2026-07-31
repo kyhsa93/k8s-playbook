@@ -292,6 +292,12 @@ real-tool ground truth available:
   `spec.requestedFreight[].origin.{kind,name}`, `spec.verification.analysisTemplates`) — the check's logic
   (`sources.stages` + `verification.analysisTemplates`) already matched real Kargo, so no logic change was needed.
 
+## Benchmark
+
+The harness can also be reused as a benchmark for how well an AI coding agent authors Kubernetes manifests
+that follow this repo's documented conventions for a workload it's never seen before — see
+[docs/benchmark.md](docs/benchmark.md) and `scripts/score.sh`.
+
 ## License
 
 This repo's own code is [MIT licensed](LICENSE). A handful of fixtures vendor real third-party files verbatim
