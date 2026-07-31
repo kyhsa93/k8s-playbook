@@ -1,0 +1,18 @@
+# Plaintext Ingress -- no tls block, so traffic is served over HTTP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  rules:
+    - host: payment.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-api
+                port:
+                  number: 8080

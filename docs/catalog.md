@@ -47,6 +47,20 @@ Each entry consists of three parts: the anti-pattern, its correct-pattern counte
 | 14 | every workload lives in the `default` namespace | separate namespaces per team/environment | check whether `namespace` is missing or `default` | implemented |
 | 15 | no namespace-scoped RBAC, cluster-wide permissions granted instead | least-privilege RoleBinding scoped to the namespace (a ClusterRole can still be referenced for reuse) | check for ClusterRoleBinding usage — the actual cluster-wide grant mechanism | implemented |
 
+## 7. Networking
+
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 16 | workloads/Services with no NetworkPolicy in the namespace | default-deny NetworkPolicy + explicit allow rules | check whether any NetworkPolicy exists in a namespace that has Deployment/StatefulSet/DaemonSet/Service resources | implemented |
+| 17 | Ingress with no `spec.tls`, traffic served over plaintext HTTP | `spec.tls` referencing a Secret with the cert/key | parse Ingress resources for a `tls` block | implemented |
+
+## 8. Autoscaling / Capacity
+
+| # | Anti-Pattern | Correct Pattern | Harness Check | Status |
+|---|---|---|---|---|
+| 18 | HPA targets a workload whose containers have no `resources.requests` | HPA target has `resources.requests` set so utilization % is computable | resolve each HPA's `scaleTargetRef` and check the target's containers for `resources.requests` | implemented |
+| 19 | HPA with `minReplicas == maxReplicas` — no real scaling range | `minReplicas < maxReplicas`, an actual range to scale within | compare `spec.minReplicas`/`spec.maxReplicas` | implemented |
+
 ---
 
 Use this catalog as the checklist for building the harness against the minimal fixture (raw manifest) first. As Kustomize/Helm/Argo CD/Flux fixtures are added, re-run the same checklist to confirm each item is detected identically regardless of tool.

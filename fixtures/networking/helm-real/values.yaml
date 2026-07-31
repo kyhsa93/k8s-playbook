@@ -1,0 +1,6 @@
+# Defaults to tls disabled -- the anti-pattern -- so a plain `helm template`
+# with no -f flag renders the bad case, matching the repo's existing convention.
+tls:
+  enabled: false
+  host: payment.example.com
+  secretName: payment-api-tls

@@ -1,0 +1,4 @@
+apiVersion: v2
+name: payment-api
+description: Minimal chart for validating check_networking.py tls against real Helm conditional templating
+version: 0.1.0

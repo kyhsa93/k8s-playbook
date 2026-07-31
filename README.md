@@ -26,6 +26,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Namespace/Tenancy genericity validated (`scripts/verify-namespace-tenancy-genericity.sh`, closes issue #3) against real Kustomize/Helm namespace assignment and the real ingress-nginx chart's conditional RBAC scope templating — no bugs found. **All 15 catalog items are now both implemented and genericity-validated against real tooling.**
 - [x] `scripts/verify-all.sh` runs every verification script with one command, wired into CI (`.github/workflows/verify.yml`) on every push/PR to `main`
 - [x] `apps` (item 13) validated against a genuinely reconciling Argo CD controller — not just schemas/docs (`scripts/verify-live-argocd.sh`) — found and fixed a real bug affecting all 5 harnesses, and documented a real usage caveat (see below)
+- [x] Two new catalog categories: Networking harness (`harness/check_networking.py`, catalog items 16-17: NetworkPolicy coverage, Ingress TLS) and Autoscaling/Capacity harness (`harness/check_autoscaling.py`, catalog items 18-19: HPA target resource requests, HPA min/max range), built against minimal fixtures (`scripts/verify-networking.sh`, `scripts/verify-autoscaling.sh`) and genericity-validated (`scripts/verify-networking-genericity.sh`, `scripts/verify-autoscaling-genericity.sh`) against real Kustomize/Helm renders and the real `ingress-nginx` chart's `networkPolicy`/`autoscaling` toggles — no bugs found. **All 19 catalog items are now implemented and genericity-validated.**
 
 ## Setup
 
@@ -105,6 +106,27 @@ scripts/verify-namespace-tenancy-genericity.sh
 
 # apps (item 13) against a genuinely reconciling Argo CD controller, not just schemas/docs
 scripts/verify-live-argocd.sh
+
+# Networking checks (catalog items 16-17)
+python3 harness/check_networking.py netpol fixtures/networking/netpol-bad.yaml   # exits 1
+python3 harness/check_networking.py netpol fixtures/networking/netpol-good.yaml  # exits 0
+python3 harness/check_networking.py tls fixtures/networking/ingress-tls-bad.yaml    # exits 1
+python3 harness/check_networking.py tls fixtures/networking/ingress-tls-good.yaml   # exits 0
+
+# Autoscaling/Capacity checks (catalog items 18-19)
+python3 harness/check_autoscaling.py requests fixtures/autoscaling/hpa-no-requests-bad.yaml   # exits 1
+python3 harness/check_autoscaling.py requests fixtures/autoscaling/hpa-no-requests-good.yaml  # exits 0
+python3 harness/check_autoscaling.py minmax fixtures/autoscaling/hpa-minmax-bad.yaml   # exits 1
+python3 harness/check_autoscaling.py minmax fixtures/autoscaling/hpa-minmax-good.yaml  # exits 0
+
+# run all networking/autoscaling fixtures through their harnesses and assert the expected verdict
+scripts/verify-networking.sh
+scripts/verify-autoscaling.sh
+
+# Networking/Autoscaling genericity: real kustomize/helm renders + the real ingress-nginx
+# chart's networkPolicy/autoscaling toggles
+scripts/verify-networking-genericity.sh
+scripts/verify-autoscaling-genericity.sh
 ```
 
 See [Setup](#setup) above for `kustomize`/`helm`/PyYAML requirements.

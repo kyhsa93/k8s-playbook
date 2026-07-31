@@ -1,0 +1,6 @@
+# No patch applied -- the base Ingress has no tls block, still the anti-pattern
+# even served through a proper overlay structure.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base

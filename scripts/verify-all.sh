@@ -14,6 +14,10 @@ SCRIPTS=(
   scripts/verify-secrets-genericity.sh
   scripts/verify-namespace-tenancy-genericity.sh
   scripts/verify-live-argocd.sh
+  scripts/verify-networking.sh
+  scripts/verify-networking-genericity.sh
+  scripts/verify-autoscaling.sh
+  scripts/verify-autoscaling-genericity.sh
 )
 
 overall=0

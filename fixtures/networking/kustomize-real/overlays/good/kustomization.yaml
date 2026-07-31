@@ -1,0 +1,16 @@
+# Real Kustomize JSON6902 patch adding the tls block onto the base Ingress.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Ingress
+      name: payment-api
+    patch: |-
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts:
+              - payment.example.com
+            secretName: payment-api-tls

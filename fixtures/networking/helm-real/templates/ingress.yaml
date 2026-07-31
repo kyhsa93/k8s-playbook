@@ -1,0 +1,25 @@
+# Uses a real Helm conditional block to decide whether spec.tls is
+# rendered at all -- not a static fixture.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  {{- if .Values.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.tls.host }}
+      secretName: {{ .Values.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.tls.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-api
+                port:
+                  number: 8080

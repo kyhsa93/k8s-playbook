@@ -1,0 +1,50 @@
+# Same workload, paired with a NetworkPolicy -- default-deny ingress plus an
+# explicit allow rule, instead of leaving the namespace's traffic wide open.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: payment-api:1.4.2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  selector:
+    app: payment-api
+  ports:
+    - port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-api-allow
+  namespace: payment
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: checkout-api
+      ports:
+        - port: 8080
