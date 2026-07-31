@@ -89,6 +89,55 @@ trustworthy scorer against a genuinely novel requirement, and (2) this repo's do
 enough for an agent, not just a human, to find and apply on its own without being told which files
 to look at.
 
+## Run — comparing models (Sonnet vs Haiku)
+
+Task: add a **`shipment-tracker-api`** workload — an internal-only HTTP service (no external
+exposure) tracking parcel shipments, with bursty nightly-batch traffic, a database credential
+supplied via configuration, and a required dev→staging→prod promotion pipeline with a
+verification gate at each step (added specifically to exercise v2's new item 12 scoring).
+Two agents, identical prompt, `isolation:"worktree"`, one on Sonnet and one on Haiku, spawned
+after committing the v2 `score.sh` change (avoiding the uncommitted-scorer detour from the run
+above).
+
+**Both self-reported `9/9 applicable checks passed (1 N/A excluded)`, independently reproduced
+exactly against each agent's actual files from the main checkout.** Unlike BSP's
+Sonnet-vs-Haiku round (SavingsPocket domain), which found a clean pass/fail gap (6/6 vs 3/3),
+this run's harness score alone shows no difference between the two models at all.
+
+Reading both submissions directly surfaced two real quality differences the harness cannot
+see — one favoring each model, not a clean win either way:
+
+- **Sonnet's `NetworkPolicy` has a self-defeating ingress rule.** Alongside a correctly-scoped
+  rule allowing only the assumed webhook-gateway namespace, it added a second ingress rule with
+  `namespaceSelector: {}` — which Kubernetes matches against *every* namespace, not "other
+  internal services" as its own comment claimed. That makes the first, narrower rule pointless:
+  the policy as written accepts traffic from any pod in any namespace on port 8080, which is a
+  real least-privilege violation `check_networking.py`'s `netpol` check can't detect (it only
+  checks that *a* `NetworkPolicy` exists in the namespace, not that its rules are actually
+  scoped). Haiku's ingress rules name exactly two namespaces (`batch-jobs`, `order-processing`)
+  with no such catch-all.
+- **Haiku's promotion pipeline is more complete and closer to actually deployable.** This
+  repo's own `fixtures/gitops/promotion/good.yaml` (the fixture nearest `docs/catalog.md`, and
+  what `check_promotion` is validated against) only contains `Stage` resources — deliberately
+  minimal, since it exists purely to be scored. A real Kargo pipeline also needs a `Warehouse`
+  (the actual freight source `Stage.spec.requestedFreight[].origin` points at) and typically a
+  `Project`, both present in the deeper `examples/kargo-live-validation/kargo-resources.yaml`.
+  Sonnet's `promotion/pipeline.yaml` mirrors the minimal Stage-only fixture — it passes
+  `check_promotion` but references a `Warehouse` named `shipment-tracker-api` that is never
+  defined anywhere in its submission, so the pipeline as delivered would never actually
+  discover freight on a real cluster. Haiku's `promotion-pipeline.yaml` includes the matching
+  `Project` and `Warehouse`, i.e. it read further into the repo's docs than the minimum needed
+  to satisfy the scorer and produced something that would actually work if applied.
+- Also notable, though not scored either: Haiku's container `securityContext` adds
+  `readOnlyRootFilesystem: true`, `allowPrivilegeEscalation: false`, and `capabilities.drop:
+  [ALL]` on top of `runAsNonRoot` — a fuller answer to catalog item 4's "least privilege" than
+  Sonnet's pod-level `runAsNonRoot: true` alone. `check_workload.py` only checks for
+  `runAsNonRoot`, so this difference is invisible to the score too.
+
+**Takeaway**: a tied structural score does not mean tied output quality in either direction —
+it means the harness's blind spots need to be checked by hand every time, regardless of which
+model is being evaluated or how the two scores compare.
+
 ## How to extend this
 
 - **v3 (item 13, apps)**: give the task an existing small App-of-Apps/ApplicationSet/Flux
