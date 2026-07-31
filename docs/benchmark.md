@@ -8,7 +8,16 @@ A typical coding benchmark asks "does it pass the tests." This benchmark asks a 
 
 ## Scope: which catalog items are scored
 
-Only checks that can be scored from **one rendered manifest snapshot** are included — `scripts/score.sh` runs items 1-6 (workload/HA), 9-10 (secrets), and 14-19 (namespace/tenancy, networking, autoscaling). Items 7-8 (config-management, needs multiple per-environment renders) and 11-13 (GitOps-state, needs a declared/live pair or a full Warehouse/Stage pipeline) are out of scope for this version — see "How to extend this" below.
+`scripts/score.sh` is versioned by what submission shape it can accept, not by a flag — each version below is what the current script actually does, not a plan:
+
+| Version | Items covered | Submission shape | Status |
+|---|---|---|---|
+| v1 | 1-6, 9-10, 14-19 (9 items) | one rendered manifest snapshot | shipped |
+| v2 | + 12 (promotion) | v1's manifest + an optional second file, a Kargo `Stage` pipeline (`scripts/score.sh <manifest.yaml> [promotion-pipeline.yaml]`) | shipped |
+| v3 | + 13 (apps) | v2's submission + existing sibling app-registration manifests supplied as task context (App-of-Apps/ApplicationSet/Flux tree membership can't be judged from one new app alone) | scoped, not implemented |
+| v4 | + 7-8 (config-mgmt) | a Kustomize base+overlays or Helm chart+per-env values directory, not a single manifest at all | scoped, not implemented |
+
+**Item 11 (drift) is permanently out of scope for this benchmark, not a future version.** Drift is a live-cluster-vs-Git divergence signal — it only exists when someone (or something) changes a running cluster out-of-band *after* a manifest was authored and applied. An authoring benchmark scores what an agent writes; it structurally cannot produce or avoid drift, so there is no version of this benchmark that could ever score item 11. The ceiling for this benchmark, once v3+v4 are built, is **18/19 applicable items**, not 19/19.
 
 ## Task format
 
@@ -21,9 +30,10 @@ The prompt given to the agent contains only these things — **it never explains
 ## Scoring
 
 ```bash
-scripts/score.sh <manifest.yaml>          # a single rendered/raw manifest file
-kustomize build <dir> | scripts/score.sh -   # or pipe rendered Kustomize/Helm output
+scripts/score.sh <manifest.yaml>                              # a single rendered/raw manifest file
+kustomize build <dir> | scripts/score.sh -                    # or pipe rendered Kustomize/Helm output
 helm template <chart> | scripts/score.sh -
+scripts/score.sh <manifest.yaml> <promotion-pipeline.yaml>    # v2: also score item 12 (Kargo Stage pipeline)
 ```
 
 - **Output**: one `[PASS]`/`[FAIL]`/`[N/A]` line per scoring unit, plus a summary
@@ -81,12 +91,21 @@ to look at.
 
 ## How to extend this
 
-- **A task suite by difficulty**: this first run asked for one workload needing
-  ingress+autoscaling+secrets hygiene together. A harder level could require a second,
-  related workload plus a GitOps deployment artifact (Argo CD `Application`/Flux
-  `Kustomization`/Kargo `Stage`) to exercise items 11-13, or a Kustomize base +
-  per-environment overlays to exercise items 7-8 — neither is scored by
-  `scripts/score.sh` today.
+- **v3 (item 13, apps)**: give the task an existing small App-of-Apps/ApplicationSet/Flux
+  `dependsOn` tree as supplied context (not something the agent invents from scratch) and
+  ask it to register one new workload into that tree correctly. `check_apps` already
+  requires 2+ app resources to judge tree membership at all (a single app always passes
+  trivially — see `harness/check_gitops_state.py`'s `len(apps) == 1` short-circuit), so the
+  task must hand the agent the sibling apps directly.
+- **v4 (items 7-8, config-mgmt)**: change the submission shape entirely — a Kustomize
+  base+overlays or Helm chart+per-env values directory instead of one file. `scripts/score.sh`
+  would need a directory-aware invocation (render each env with `kustomize build`/`helm
+  template` before handing the result to `check_config_mgmt.py env-parity`/`values-bloat`),
+  which is a bigger change than v2's optional-second-file pattern.
+- **A task suite by difficulty**: so far every run has asked for one workload's worth of
+  hygiene (v1) or hygiene + a promotion pipeline (v2). Once v3/v4 exist, a harder level
+  could combine all of them in one task — a new workload needing hygiene, a promotion
+  pipeline, App-of-Apps registration, and per-env overlays at once.
 - **Comparing across models**: run the identical task prompt with a different model and
   compare the independently-reverified scores — mirrors
   [backend-service-playbook's benchmark](https://github.com/kyhsa93/backend-service-playbook/blob/main/docs/benchmark.md)

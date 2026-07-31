@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 # Aggregate scorer for the AI manifest-authoring benchmark (docs/benchmark.md).
 # Runs every catalog check that can be scored from a single rendered manifest
-# snapshot (items 1-6, 9, 10, 14-19) against one submission and reports a
-# combined PASS/FAIL/N-A result. Unlike scripts/verify-*.sh (which assert known
+# snapshot (items 1-6, 9, 10, 14-19), plus item 12 if a Kargo Stage pipeline
+# file is also given, against one submission and reports a combined
+# PASS/FAIL/N-A result. Unlike scripts/verify-*.sh (which assert known
 # fixtures pass/fail), this scores an arbitrary new manifest -- deliberately not
 # wired into scripts/verify-all.sh.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-if [ $# -ne 1 ]; then
-  echo "usage: score.sh <manifest.yaml|->" >&2
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+  echo "usage: score.sh <manifest.yaml|-> [promotion-pipeline.yaml]" >&2
   exit 2
 fi
 
 file="$1"
+promotion_file="${2:-}"
 tmpinput=""
 if [ "$file" = "-" ]; then
   tmpinput="$(mktemp)"
@@ -57,6 +59,10 @@ score "netpol (item 16)"            python3 harness/check_networking.py netpol "
 score "ingress-tls (item 17)"       python3 harness/check_networking.py tls "$file"
 score "hpa-requests (item 18)"      python3 harness/check_autoscaling.py requests "$file"
 score "hpa-minmax (item 19)"        python3 harness/check_autoscaling.py minmax "$file"
+
+if [ -n "$promotion_file" ]; then
+  score "promotion (item 12)"       python3 harness/check_gitops_state.py promotion "$promotion_file"
+fi
 
 applicable=$((passed + failed))
 echo
