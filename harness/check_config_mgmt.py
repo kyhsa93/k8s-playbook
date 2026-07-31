@@ -18,9 +18,22 @@ ENV_SENSITIVE_NAME = re.compile(r"(HOST|DOMAIN|URL|ENVIRONMENT|REGION|STAGE)", r
 WORKLOAD_KINDS = {"Deployment", "StatefulSet", "DaemonSet"}
 
 
+def _expand_lists(docs):
+    # `kubectl get <kind> <name1> <name2> -o yaml` wraps results in a single
+    # `kind: List` document with an `items:` array instead of `---`-separated
+    # docs -- expand it so every check below sees the individual resources.
+    expanded = []
+    for d in docs:
+        if d.get("kind") == "List":
+            expanded.extend(item for item in d.get("items", []) if item)
+        else:
+            expanded.append(d)
+    return expanded
+
+
 def load_docs(path):
     with open(path) as f:
-        return [d for d in yaml.safe_load_all(f) if d]
+        return _expand_lists(d for d in yaml.safe_load_all(f) if d)
 
 
 def ingress_hosts(docs):

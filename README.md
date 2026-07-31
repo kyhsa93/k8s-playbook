@@ -25,6 +25,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Secrets genericity validated (`scripts/verify-secrets-genericity.sh`, closes issue #2) against real Kustomize/Helm renders and real SealedSecret/ExternalSecret schemas — no bugs found
 - [x] Namespace/Tenancy genericity validated (`scripts/verify-namespace-tenancy-genericity.sh`, closes issue #3) against real Kustomize/Helm namespace assignment and the real ingress-nginx chart's conditional RBAC scope templating — no bugs found. **All 15 catalog items are now both implemented and genericity-validated against real tooling.**
 - [x] `scripts/verify-all.sh` runs every verification script with one command, wired into CI (`.github/workflows/verify.yml`) on every push/PR to `main`
+- [x] `apps` (item 13) validated against a genuinely reconciling Argo CD controller — not just schemas/docs (`scripts/verify-live-argocd.sh`) — found and fixed a real bug affecting all 5 harnesses, and documented a real usage caveat (see below)
 
 ## Setup
 
@@ -101,9 +102,44 @@ scripts/verify-secrets-genericity.sh
 
 # Namespace/Tenancy genericity: real kustomize/helm namespace assignment + a real chart's RBAC scope toggle (closes issue #3)
 scripts/verify-namespace-tenancy-genericity.sh
+
+# apps (item 13) against a genuinely reconciling Argo CD controller, not just schemas/docs
+scripts/verify-live-argocd.sh
 ```
 
 See [Setup](#setup) above for `kustomize`/`helm`/PyYAML requirements.
+
+### Live Argo CD genericity validation for `apps` (item 13)
+
+Every other GitOps-state check was validated against real schemas/docs or a real cluster's API server, but
+`apps` had only ever been checked against documentation of how Argo CD/Flux/ApplicationSet behave — never a
+genuinely reconciling controller. This round closed that gap, scoped to Argo CD only (Flux/Kargo live-controller
+testing is a heavier lift, left for later if picked up).
+
+**Setup:** a disposable kind cluster ran a real Argo CD install (`argoproj/argo-cd` `stable` manifests — the
+`applicationsets.argoproj.io` CRD is large enough that plain `kubectl apply` hits etcd's annotation size limit,
+so it needs `--server-side`). It was pointed at `examples/argocd-live-validation/` in this repo (self-contained
+so the test doesn't depend on another project's example-repo structure staying stable) — a classic App-of-Apps
+(root `Application` with `source.directory.recurse: true`) and a real `ApplicationSet` (list generator), both
+managing two trivial `pause` Deployments.
+
+**What it found:**
+- **A real bug affecting all 5 harnesses.** `kubectl get <kind> <name1> <name2> -o yaml` (naming 2+ resources in
+  one call) wraps the result in a single `kind: List` document with an `items:` array, instead of the
+  `---`-separated documents every harness's `load_docs()`/`main()` was written to expect. Every harness in this
+  repo silently produced "no resources found" against output shaped exactly like the most natural way to dump
+  multiple live resources with `kubectl`. Fixed by expanding `kind: List` into its `items` in all 5
+  `harness/*.py` files.
+- **A real usage caveat, not a bug.** The classic App-of-Apps signal (`source.directory.recurse: true`) lives
+  entirely on the root `Application` — confirmed empirically, no `ownerReferences` are set on the children by a
+  real Argo CD v3.4.5 controller, exactly as the earlier docs-based round concluded. But that also means if the
+  root is excluded from what you feed `check_apps` (e.g. you only queried the apps your own team owns), the
+  check has no way to tell two legitimately-managed children from two standalone one-off Applications, and will
+  report FAIL. `fixtures/gitops/apps/live-argocd-appofapps-children-only.yaml` captures exactly this case and is
+  asserted to fail on purpose — always include the root when auditing whether a set of apps is under App-of-Apps.
+- **Confirmed, not just assumed.** The `ApplicationSet` controller genuinely stamps `ownerReferences` on the
+  Applications it generates, pointing at the `ApplicationSet` — `fixtures/gitops/apps/live-argocd-applicationset-full.yaml`
+  is a real capture of this, not hand-written.
 
 ### Namespace/Tenancy genericity validation (issue #3)
 

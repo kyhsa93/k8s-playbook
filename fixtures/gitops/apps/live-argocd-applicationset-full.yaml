@@ -1,0 +1,196 @@
+# Genuine dump from the same live Argo CD v3.4.5 instance: a real ApplicationSet
+# (list generator, examples/argocd-live-validation/applicationset.yaml) plus the two
+# Applications it actually generated. Confirms empirically: the
+# applicationset-controller DOES stamp real ownerReferences on generated
+# Applications, pointing at the ApplicationSet -- exactly the documented
+# distinction check_apps relies on (see README's genericity validation notes).
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"argoproj.io/v1alpha1","kind":"ApplicationSet","metadata":{"annotations":{},"name":"live-validation","namespace":"argocd"},"spec":{"generators":[{"list":{"elements":[{"name":"a"},{"name":"b"}]}}],"template":{"metadata":{"name":"appset-workload-{{name}}"},"spec":{"destination":{"namespace":"argocd-live-appset-{{name}}","server":"https://kubernetes.default.svc"},"project":"default","source":{"path":"examples/argocd-live-validation/workloads/{{name}}","repoURL":"https://github.com/kyhsa93/k8s-playbook.git","targetRevision":"HEAD"},"syncPolicy":{"syncOptions":["CreateNamespace=true"]}}}}}
+  creationTimestamp: "2026-07-31T02:03:43Z"
+  generation: 1
+  name: live-validation
+  namespace: argocd
+  resourceVersion: "1840"
+  uid: fd17206c-b54f-420a-a76f-0349384d27b2
+spec:
+  generators:
+  - list:
+      elements:
+      - name: a
+      - name: b
+  template:
+    metadata:
+      name: appset-workload-{{name}}
+    spec:
+      destination:
+        namespace: argocd-live-appset-{{name}}
+        server: https://kubernetes.default.svc
+      project: default
+      source:
+        path: examples/argocd-live-validation/workloads/{{name}}
+        repoURL: https://github.com/kyhsa93/k8s-playbook.git
+        targetRevision: HEAD
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-31T02:03:43Z"
+    message: All applications have been generated successfully
+    reason: ApplicationSetUpToDate
+    status: "False"
+    type: ErrorOccurred
+  - lastTransitionTime: "2026-07-31T02:03:43Z"
+    message: Successfully generated parameters for all Applications
+    reason: ParametersGenerated
+    status: "True"
+    type: ParametersGenerated
+  - lastTransitionTime: "2026-07-31T02:03:43Z"
+    message: All applications have been generated successfully
+    reason: ApplicationSetUpToDate
+    status: "True"
+    type: ResourcesUpToDate
+  health:
+    message: All applications have been generated successfully
+    status: Healthy
+  resources:
+  - group: argoproj.io
+    health: {}
+    kind: Application
+    name: appset-workload-a
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    health: {}
+    kind: Application
+    name: appset-workload-b
+    namespace: argocd
+    version: v1alpha1
+  resourcesCount: 2
+---
+apiVersion: v1
+items:
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    creationTimestamp: "2026-07-31T02:03:43Z"
+    finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    generation: 2
+    name: appset-workload-a
+    namespace: argocd
+    ownerReferences:
+    - apiVersion: argoproj.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ApplicationSet
+      name: live-validation
+      uid: fd17206c-b54f-420a-a76f-0349384d27b2
+    resourceVersion: "1846"
+    uid: aed5ff3f-e9fb-41a7-95f9-834f491886f2
+  spec:
+    destination:
+      namespace: argocd-live-appset-a
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: examples/argocd-live-validation/workloads/a
+      repoURL: https://github.com/kyhsa93/k8s-playbook.git
+      targetRevision: HEAD
+    syncPolicy:
+      syncOptions:
+      - CreateNamespace=true
+  status:
+    controllerNamespace: argocd
+    health:
+      lastTransitionTime: "2026-07-31T02:03:44Z"
+      status: Missing
+    reconciledAt: "2026-07-31T02:03:43Z"
+    resourceHealthSource: appTree
+    resources:
+    - group: apps
+      kind: Deployment
+      name: workload-a
+      namespace: argocd-live-appset-a
+      status: OutOfSync
+      version: v1
+    sourceHydrator: {}
+    sourceType: Directory
+    summary: {}
+    sync:
+      comparedTo:
+        destination:
+          namespace: argocd-live-appset-a
+          server: https://kubernetes.default.svc
+        source:
+          path: examples/argocd-live-validation/workloads/a
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      status: OutOfSync
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    creationTimestamp: "2026-07-31T02:03:43Z"
+    finalizers:
+    - resources-finalizer.argocd.argoproj.io
+    generation: 2
+    name: appset-workload-b
+    namespace: argocd
+    ownerReferences:
+    - apiVersion: argoproj.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ApplicationSet
+      name: live-validation
+      uid: fd17206c-b54f-420a-a76f-0349384d27b2
+    resourceVersion: "1845"
+    uid: 41d347f7-b662-4314-a9f6-af5253ece310
+  spec:
+    destination:
+      namespace: argocd-live-appset-b
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: examples/argocd-live-validation/workloads/b
+      repoURL: https://github.com/kyhsa93/k8s-playbook.git
+      targetRevision: HEAD
+    syncPolicy:
+      syncOptions:
+      - CreateNamespace=true
+  status:
+    controllerNamespace: argocd
+    health:
+      lastTransitionTime: "2026-07-31T02:03:44Z"
+      status: Missing
+    reconciledAt: "2026-07-31T02:03:43Z"
+    resourceHealthSource: appTree
+    resources:
+    - group: apps
+      kind: Deployment
+      name: workload-b
+      namespace: argocd-live-appset-b
+      status: OutOfSync
+      version: v1
+    sourceHydrator: {}
+    sourceType: Directory
+    summary: {}
+    sync:
+      comparedTo:
+        destination:
+          namespace: argocd-live-appset-b
+          server: https://kubernetes.default.svc
+        source:
+          path: examples/argocd-live-validation/workloads/b
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      status: OutOfSync
+kind: List
+metadata:
+  resourceVersion: ""

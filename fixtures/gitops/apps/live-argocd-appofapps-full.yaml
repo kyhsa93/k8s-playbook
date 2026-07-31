@@ -1,0 +1,356 @@
+# Genuine `kubectl -n argocd get application root-app workload-a workload-b -o yaml`
+# dump from a real Argo CD v3.4.5 instance in a disposable kind cluster, reconciling
+# the classic App-of-Apps example under examples/argocd-live-validation/. Includes the
+# root Application (source.directory.recurse: true) alongside its two children.
+# Confirms empirically: no ownerReferences are set on the children by this pattern --
+# the recurse root is the only signal. Also a real-world `kind: List` wrapper (kubectl's
+# actual output shape when you name multiple resources in one `get`), which is why
+# check_gitops_state.py's load_docs() has to unwrap `kind: List` before processing.
+apiVersion: v1
+items:
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{},"name":"root-app","namespace":"argocd"},"spec":{"destination":{"namespace":"argocd","server":"https://kubernetes.default.svc"},"project":"default","source":{"directory":{"recurse":true},"path":"examples/argocd-live-validation/apps","repoURL":"https://github.com/kyhsa93/k8s-playbook.git","targetRevision":"HEAD"},"syncPolicy":{"automated":{}}}}
+    creationTimestamp: "2026-07-31T01:59:57Z"
+    generation: 9
+    name: root-app
+    namespace: argocd
+    resourceVersion: "1800"
+    uid: 29fc602b-b37d-448c-a85c-24fb4df3a78d
+  spec:
+    destination:
+      namespace: argocd
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      directory:
+        recurse: true
+      path: examples/argocd-live-validation/apps
+      repoURL: https://github.com/kyhsa93/k8s-playbook.git
+      targetRevision: HEAD
+    syncPolicy:
+      automated: {}
+  status:
+    controllerNamespace: argocd
+    health:
+      lastTransitionTime: "2026-07-31T01:59:58Z"
+      status: Healthy
+    history:
+    - deployStartedAt: "2026-07-31T01:59:57Z"
+      deployedAt: "2026-07-31T01:59:58Z"
+      id: 0
+      initiatedBy:
+        automated: true
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      source:
+        directory:
+          recurse: true
+        path: examples/argocd-live-validation/apps
+        repoURL: https://github.com/kyhsa93/k8s-playbook.git
+        targetRevision: HEAD
+    operationState:
+      finishedAt: "2026-07-31T01:59:58Z"
+      message: successfully synced (all tasks run)
+      operation:
+        initiatedBy:
+          automated: true
+        retry:
+          limit: 5
+        sync:
+          revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+          source:
+            directory:
+              recurse: true
+            path: examples/argocd-live-validation/apps
+            repoURL: https://github.com/kyhsa93/k8s-playbook.git
+            targetRevision: HEAD
+      phase: Succeeded
+      startedAt: "2026-07-31T01:59:57Z"
+      syncResult:
+        resources:
+        - group: argoproj.io
+          hookPhase: Running
+          kind: Application
+          message: application.argoproj.io/workload-b created
+          name: workload-b
+          namespace: argocd
+          status: Synced
+          syncPhase: Sync
+          version: v1alpha1
+        - group: argoproj.io
+          hookPhase: Running
+          kind: Application
+          message: application.argoproj.io/workload-a created
+          name: workload-a
+          namespace: argocd
+          status: Synced
+          syncPhase: Sync
+          version: v1alpha1
+        revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+        source:
+          directory:
+            recurse: true
+          path: examples/argocd-live-validation/apps
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+    reconciledAt: "2026-07-31T02:03:20Z"
+    resourceHealthSource: appTree
+    resources:
+    - group: argoproj.io
+      kind: Application
+      name: workload-a
+      namespace: argocd
+      status: Synced
+      version: v1alpha1
+    - group: argoproj.io
+      kind: Application
+      name: workload-b
+      namespace: argocd
+      status: Synced
+      version: v1alpha1
+    sourceHydrator: {}
+    sourceType: Directory
+    summary: {}
+    sync:
+      comparedTo:
+        destination:
+          namespace: argocd
+          server: https://kubernetes.default.svc
+        source:
+          directory:
+            recurse: true
+          path: examples/argocd-live-validation/apps
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      status: Synced
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    annotations:
+      argocd.argoproj.io/tracking-id: root-app:argoproj.io/Application:argocd/workload-a
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"root-app:argoproj.io/Application:argocd/workload-a"},"name":"workload-a","namespace":"argocd"},"spec":{"destination":{"namespace":"argocd-live-a","server":"https://kubernetes.default.svc"},"project":"default","source":{"path":"examples/argocd-live-validation/workloads/a","repoURL":"https://github.com/kyhsa93/k8s-playbook.git","targetRevision":"HEAD"},"syncPolicy":{"automated":{},"syncOptions":["CreateNamespace=true"]}}}
+    creationTimestamp: "2026-07-31T01:59:58Z"
+    generation: 10
+    name: workload-a
+    namespace: argocd
+    resourceVersion: "1804"
+    uid: 1df374ad-9d12-4600-a1c4-2e03e1df9b23
+  spec:
+    destination:
+      namespace: argocd-live-a
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: examples/argocd-live-validation/workloads/a
+      repoURL: https://github.com/kyhsa93/k8s-playbook.git
+      targetRevision: HEAD
+    syncPolicy:
+      automated: {}
+      syncOptions:
+      - CreateNamespace=true
+  status:
+    controllerNamespace: argocd
+    health:
+      lastTransitionTime: "2026-07-31T02:00:01Z"
+      status: Healthy
+    history:
+    - deployStartedAt: "2026-07-31T01:59:58Z"
+      deployedAt: "2026-07-31T01:59:58Z"
+      id: 0
+      initiatedBy:
+        automated: true
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      source:
+        path: examples/argocd-live-validation/workloads/a
+        repoURL: https://github.com/kyhsa93/k8s-playbook.git
+        targetRevision: HEAD
+    operationState:
+      finishedAt: "2026-07-31T01:59:58Z"
+      message: successfully synced (all tasks run)
+      operation:
+        initiatedBy:
+          automated: true
+        retry:
+          limit: 5
+        sync:
+          revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+          source:
+            path: examples/argocd-live-validation/workloads/a
+            repoURL: https://github.com/kyhsa93/k8s-playbook.git
+            targetRevision: HEAD
+          syncOptions:
+          - CreateNamespace=true
+      phase: Succeeded
+      startedAt: "2026-07-31T01:59:58Z"
+      syncResult:
+        resources:
+        - group: ""
+          hookPhase: Running
+          kind: Namespace
+          message: namespace/argocd-live-a created
+          name: argocd-live-a
+          namespace: ""
+          status: Synced
+          syncPhase: PreSync
+          version: v1
+        - group: apps
+          hookPhase: Running
+          images:
+          - registry.k8s.io/pause:3.9
+          kind: Deployment
+          message: deployment.apps/workload-a created
+          name: workload-a
+          namespace: argocd-live-a
+          status: Synced
+          syncPhase: Sync
+          version: v1
+        revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+        source:
+          path: examples/argocd-live-validation/workloads/a
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+    reconciledAt: "2026-07-31T02:03:23Z"
+    resourceHealthSource: appTree
+    resources:
+    - group: apps
+      kind: Deployment
+      name: workload-a
+      namespace: argocd-live-a
+      status: Synced
+      version: v1
+    sourceHydrator: {}
+    sourceType: Directory
+    summary:
+      images:
+      - registry.k8s.io/pause:3.9
+    sync:
+      comparedTo:
+        destination:
+          namespace: argocd-live-a
+          server: https://kubernetes.default.svc
+        source:
+          path: examples/argocd-live-validation/workloads/a
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      status: Synced
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    annotations:
+      argocd.argoproj.io/tracking-id: root-app:argoproj.io/Application:argocd/workload-b
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{"argocd.argoproj.io/tracking-id":"root-app:argoproj.io/Application:argocd/workload-b"},"name":"workload-b","namespace":"argocd"},"spec":{"destination":{"namespace":"argocd-live-b","server":"https://kubernetes.default.svc"},"project":"default","source":{"path":"examples/argocd-live-validation/workloads/b","repoURL":"https://github.com/kyhsa93/k8s-playbook.git","targetRevision":"HEAD"},"syncPolicy":{"automated":{},"syncOptions":["CreateNamespace=true"]}}}
+    creationTimestamp: "2026-07-31T01:59:58Z"
+    generation: 10
+    name: workload-b
+    namespace: argocd
+    resourceVersion: "1812"
+    uid: a63ef2cc-ccc1-402c-b2d6-a63cd97817ae
+  spec:
+    destination:
+      namespace: argocd-live-b
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: examples/argocd-live-validation/workloads/b
+      repoURL: https://github.com/kyhsa93/k8s-playbook.git
+      targetRevision: HEAD
+    syncPolicy:
+      automated: {}
+      syncOptions:
+      - CreateNamespace=true
+  status:
+    controllerNamespace: argocd
+    health:
+      lastTransitionTime: "2026-07-31T02:00:01Z"
+      status: Healthy
+    history:
+    - deployStartedAt: "2026-07-31T01:59:58Z"
+      deployedAt: "2026-07-31T01:59:58Z"
+      id: 0
+      initiatedBy:
+        automated: true
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      source:
+        path: examples/argocd-live-validation/workloads/b
+        repoURL: https://github.com/kyhsa93/k8s-playbook.git
+        targetRevision: HEAD
+    operationState:
+      finishedAt: "2026-07-31T01:59:58Z"
+      message: successfully synced (all tasks run)
+      operation:
+        initiatedBy:
+          automated: true
+        retry:
+          limit: 5
+        sync:
+          revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+          source:
+            path: examples/argocd-live-validation/workloads/b
+            repoURL: https://github.com/kyhsa93/k8s-playbook.git
+            targetRevision: HEAD
+          syncOptions:
+          - CreateNamespace=true
+      phase: Succeeded
+      startedAt: "2026-07-31T01:59:58Z"
+      syncResult:
+        resources:
+        - group: ""
+          hookPhase: Running
+          kind: Namespace
+          message: namespace/argocd-live-b created
+          name: argocd-live-b
+          namespace: ""
+          status: Synced
+          syncPhase: PreSync
+          version: v1
+        - group: apps
+          hookPhase: Running
+          images:
+          - registry.k8s.io/pause:3.9
+          kind: Deployment
+          message: deployment.apps/workload-b created
+          name: workload-b
+          namespace: argocd-live-b
+          status: Synced
+          syncPhase: Sync
+          version: v1
+        revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+        source:
+          path: examples/argocd-live-validation/workloads/b
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+    reconciledAt: "2026-07-31T02:03:27Z"
+    resourceHealthSource: appTree
+    resources:
+    - group: apps
+      kind: Deployment
+      name: workload-b
+      namespace: argocd-live-b
+      status: Synced
+      version: v1
+    sourceHydrator: {}
+    sourceType: Directory
+    summary:
+      images:
+      - registry.k8s.io/pause:3.9
+    sync:
+      comparedTo:
+        destination:
+          namespace: argocd-live-b
+          server: https://kubernetes.default.svc
+        source:
+          path: examples/argocd-live-validation/workloads/b
+          repoURL: https://github.com/kyhsa93/k8s-playbook.git
+          targetRevision: HEAD
+      revision: d331fc3d282f62be2717816fa926dc5cb8deb487
+      status: Synced
+kind: List
+metadata:
+  resourceVersion: ""

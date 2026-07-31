@@ -13,6 +13,7 @@ SCRIPTS=(
   scripts/verify-config-mgmt-genericity.sh
   scripts/verify-secrets-genericity.sh
   scripts/verify-namespace-tenancy-genericity.sh
+  scripts/verify-live-argocd.sh
 )
 
 overall=0
