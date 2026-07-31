@@ -1,0 +1,39 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      KUSTOMIZE_VERSION: v5.8.1
+      HELM_VERSION: v4.2.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install kustomize and Helm
+        run: |
+          mkdir -p .tools/bin
+          curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C .tools/bin kustomize
+          curl -sSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
+            | tar -xz -C /tmp linux-amd64/helm
+          mv /tmp/linux-amd64/helm .tools/bin/helm
+          chmod +x .tools/bin/kustomize .tools/bin/helm
+          .tools/bin/kustomize version
+          .tools/bin/helm version
+
+      - name: Run all verification scripts
+        run: scripts/verify-all.sh

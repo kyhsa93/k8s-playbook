@@ -1,5 +1,7 @@
 # k8s-playbook
 
+![verify](https://github.com/kyhsa93/k8s-playbook/actions/workflows/verify.yml/badge.svg)
+
 The goal of this repo is to **define recurring Kubernetes deployment anti-patterns and catch them automatically**.
 
 ## Principle
@@ -22,10 +24,25 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Config-management genericity validated (`scripts/verify-config-mgmt-genericity.sh`, closes issue #1) against a real Kustomize base+overlays, a real Helm chart, and a real public chart's values.yaml — no bugs found in the check logic itself, but it surfaced a real limitation (see below)
 - [x] Secrets genericity validated (`scripts/verify-secrets-genericity.sh`, closes issue #2) against real Kustomize/Helm renders and real SealedSecret/ExternalSecret schemas — no bugs found
 - [x] Namespace/Tenancy genericity validated (`scripts/verify-namespace-tenancy-genericity.sh`, closes issue #3) against real Kustomize/Helm namespace assignment and the real ingress-nginx chart's conditional RBAC scope templating — no bugs found. **All 15 catalog items are now both implemented and genericity-validated against real tooling.**
+- [x] `scripts/verify-all.sh` runs every verification script with one command, wired into CI (`.github/workflows/verify.yml`) on every push/PR to `main`
+
+## Setup
+
+```bash
+pip install -r requirements.txt   # PyYAML, needed by every harness/*.py script
+```
+
+`kustomize` and `helm` are also required for the Kustomize/Helm-backed checks (everything except the minimal
+raw-manifest fixtures). Install them onto `PATH` yourself, or place them under `.tools/bin/` (gitignored) the
+way CI does — see `.github/workflows/verify.yml` for the exact versions this repo is validated against
+(kustomize v5.8.1, Helm v4.2.3).
 
 ## Usage
 
 ```bash
+# run every verification script in one command (what CI runs)
+scripts/verify-all.sh
+
 # check a raw manifest directly
 python3 harness/check_workload.py fixtures/raw/bad-deployment.yaml   # exits 1, lists findings
 python3 harness/check_workload.py fixtures/raw/good-deployment.yaml  # exits 0
@@ -86,7 +103,7 @@ scripts/verify-secrets-genericity.sh
 scripts/verify-namespace-tenancy-genericity.sh
 ```
 
-Requires `kustomize` and `helm` on `PATH` to run the Kustomize/Helm fixtures and `scripts/verify-genericity.sh`.
+See [Setup](#setup) above for `kustomize`/`helm`/PyYAML requirements.
 
 ### Namespace/Tenancy genericity validation (issue #3)
 
@@ -165,3 +182,10 @@ real-tool ground truth available:
 - **promotion** fixtures were rewritten against Kargo's real `Stage` CRD schema (`kargo.akuity.io/v1alpha1`,
   `spec.requestedFreight[].origin.{kind,name}`, `spec.verification.analysisTemplates`) — the check's logic
   (`sources.stages` + `verification.analysisTemplates`) already matched real Kargo, so no logic change was needed.
+
+## License
+
+This repo's own code is [MIT licensed](LICENSE). A handful of fixtures vendor real third-party files verbatim
+for genericity testing (e.g. `fixtures/config-mgmt/values-bloat/real-world/values.yaml`, from
+[kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx), Apache License 2.0) — each such file
+says so and links its source in a header comment, and keeps its original license independent of this repo's.
