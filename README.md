@@ -162,8 +162,8 @@ Kargo Helm chart (`oci://ghcr.io/akuity/kargo-charts/kargo` v1.11.0). A `Project
 
 ### Live Flux genericity validation for `apps` (item 13)
 
-Follow-up to the Argo CD live round below, closing the Flux half of the gap it left open (Kargo live-controller
-testing is still out of scope).
+Follow-up to the Argo CD live round below, closing the Flux half of the gap it left open (the Kargo half was
+closed in a later round — see "Live Kargo genericity validation" above).
 
 **Setup:** a disposable kind cluster ran a real `flux install` (core controllers only, no `flux bootstrap`/Git
 write access needed), then a `GitRepository` pointed at this repo's `main` branch plus a root `infra`
@@ -186,8 +186,8 @@ were applied directly — see `examples/flux-live-validation/`.
 
 Every other GitOps-state check was validated against real schemas/docs or a real cluster's API server, but
 `apps` had only ever been checked against documentation of how Argo CD/Flux/ApplicationSet behave — never a
-genuinely reconciling controller. This round closed that gap, scoped to Argo CD only (Flux was closed in a
-follow-up round, see above; Kargo live-controller testing is still out of scope).
+genuinely reconciling controller. This round closed that gap, scoped to Argo CD only (Flux and Kargo were each
+closed in later follow-up rounds — see above).
 
 **Setup:** a disposable kind cluster ran a real Argo CD install (`argoproj/argo-cd` `stable` manifests — the
 `applicationsets.argoproj.io` CRD is large enough that plain `kubectl apply` hits etcd's annotation size limit,
