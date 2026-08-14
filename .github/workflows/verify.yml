@@ -37,3 +37,32 @@ jobs:
 
       - name: Run all verification scripts
         run: scripts/verify-all.sh
+
+  # verify-all.sh calls harness/check_all.py directly, which leaves the action wrapper
+  # around it untested -- and the wrapper is the only part an outside repo actually
+  # touches. These two jobs run the action the same way a caller would.
+  action-clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          path: fixtures/all/good
+
+  action-findings:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        uses: ./
+        with:
+          path: fixtures/all/bad
+          # The fixture violates every item on purpose, so the run has to survive the
+          # findings for this job to be able to assert on them.
+          fail-on-findings: 'false'
+      - name: The bad fixture must report findings
+        run: |
+          if [ "${{ steps.check.outputs.findings }}" != 'true' ]; then
+            echo "expected findings=true, got '${{ steps.check.outputs.findings }}'"
+            exit 1
+          fi

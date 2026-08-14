@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payment-api
+  namespace: payment
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payment-api-edit
+  namespace: payment
+subjects:
+  - kind: ServiceAccount
+    name: payment-api
+    namespace: payment
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: payment-api-secrets
+  namespace: payment
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: payment-api-vault
+    kind: SecretStore
+  target:
+    name: payment-api-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: db-password
+      remoteRef:
+        key: payment-api/db-password

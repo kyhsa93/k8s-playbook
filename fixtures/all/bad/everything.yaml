@@ -1,0 +1,86 @@
+# The mirror image of fixtures/all/good: one violation per catalog item the
+# aggregate entrypoint covers, so a run over this directory should report every
+# check as FAIL and nothing as n/a.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  # item 14: no namespace, so it silently lands in 'default'
+spec:
+  replicas: 1 # item 5: single replica, and no PodDisruptionBudget anywhere
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      # item 4: no securityContext, so the container runs as root
+      # item 6: no podAntiAffinity
+      containers:
+        - name: payment-api
+          image: payment-api:latest # item 2
+          # item 1: no resources.requests/limits -- also what item 18 trips on
+          # item 3: no liveness/readiness probes
+          env:
+            # item 9: secret material inlined into the pod spec
+            - name: DB_PASSWORD
+              value: "s3cr3t-in-plain-sight"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-api-secrets
+  namespace: default
+type: Opaque
+data:
+  # item 10: base64 is not encryption -- this is committed secret material
+  db-password: czNjcjN0LWluLXBsYWluLXNpZ2h0
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-api
+  namespace: default
+spec:
+  # item 17: no spec.tls, so this is served over plaintext HTTP
+  rules:
+    - host: payment.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-api
+                port:
+                  number: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-api
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-api
+  # item 19: min == max, so this autoscaler cannot scale
+  minReplicas: 3
+  maxReplicas: 3
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: payment-api-edit
+subjects:
+  - kind: ServiceAccount
+    name: payment-api
+    namespace: default
+roleRef:
+  # item 15: cluster-wide edit for one namespace's workload
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io

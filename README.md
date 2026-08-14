@@ -25,6 +25,7 @@ The core deliverable here is an **anti-pattern catalog + a detection harness**. 
 - [x] Secrets genericity validated (`scripts/verify-secrets-genericity.sh`, closes issue #2) against real Kustomize/Helm renders and real SealedSecret/ExternalSecret schemas — no bugs found
 - [x] Namespace/Tenancy genericity validated (`scripts/verify-namespace-tenancy-genericity.sh`, closes issue #3) against real Kustomize/Helm namespace assignment and the real ingress-nginx chart's conditional RBAC scope templating — no bugs found. **All 15 catalog items are now both implemented and genericity-validated against real tooling.**
 - [x] `scripts/verify-all.sh` runs every verification script with one command, wired into CI (`.github/workflows/verify.yml`) on every push/PR to `main`
+- [x] Consumable from outside this repo: one aggregate entrypoint (`harness/check_all.py`) plus a GitHub Action (`action.yml`) — see [Using this on your own manifests](#using-this-on-your-own-manifests). Verified against a complete good/bad manifest set by `scripts/verify-check-all.sh`, and the action wrapper itself runs against those fixtures in CI
 - [x] `apps` (item 13) validated against a genuinely reconciling Argo CD controller — not just schemas/docs (`scripts/verify-live-argocd.sh`) — found and fixed a real bug affecting all 5 harnesses, and documented a real usage caveat (see below)
 - [x] Two new catalog categories: Networking harness (`harness/check_networking.py`, catalog items 16-17: NetworkPolicy coverage, Ingress TLS) and Autoscaling/Capacity harness (`harness/check_autoscaling.py`, catalog items 18-19: HPA target resource requests, HPA min/max range), built against minimal fixtures (`scripts/verify-networking.sh`, `scripts/verify-autoscaling.sh`) and genericity-validated (`scripts/verify-networking-genericity.sh`, `scripts/verify-autoscaling-genericity.sh`) against real Kustomize/Helm renders and the real `ingress-nginx` chart's `networkPolicy`/`autoscaling` toggles — no bugs found. **All 19 catalog items are now implemented and genericity-validated.**
 - [x] `apps` (item 13)'s `has_flux_dependency_tree` signal validated against a genuinely reconciling Flux v2 controller, not just the CRD schema (`scripts/verify-live-flux.sh`) — no bugs found in the check logic, but confirmed the same root-exclusion caveat already documented for Argo CD also applies to Flux's `dependsOn` tree (see below).
@@ -40,6 +41,58 @@ pip install -r requirements.txt   # PyYAML, needed by every harness/*.py script
 raw-manifest fixtures). Install them onto `PATH` yourself, or place them under `.tools/bin/` (gitignored) the
 way CI does — see `.github/workflows/verify.yml` for the exact versions this repo is validated against
 (kustomize v5.8.1, Helm v4.2.3).
+
+## Using this on your own manifests
+
+The per-item scripts below each answer one question, which is how they're developed and
+verified. To actually check a repo, use the aggregate entrypoint — it knows which checks
+apply, merges the manifests first so cross-document checks (a PDB matching a Deployment
+in another file, a NetworkPolicy covering a namespace declared elsewhere) see the whole
+picture, and reports what it *didn't* evaluate instead of quietly leaving it out.
+
+```bash
+pip install -r requirements.txt
+
+python3 harness/check_all.py path/to/rendered/manifests   # a directory, recursively
+python3 harness/check_all.py deploy.yaml service.yaml     # or a list of files
+kustomize build overlays/prod | python3 harness/check_all.py -
+helm template mychart -f values-prod.yaml | python3 harness/check_all.py -
+```
+
+Feed it **rendered** output — `kustomize build` / `helm template` results, not templates.
+Exit code is 0 when everything applicable passed, 1 when there are findings, 2 when it
+couldn't run at all (bad path, no manifests). A check whose subject is absent from the
+input reports `n/a` rather than `PASS`: a manifest set with no Ingress has not satisfied
+the Ingress-TLS rule, and calling that a pass would turn "we never looked" into "we
+looked and it was fine".
+
+Catalog items 7-8 (config management) and 11-13 (GitOps state) can't be answered from a
+single rendered manifest set — they compare several environment renders, or read GitOps
+controller objects. `check_all.py` lists them as not evaluated on every run; use
+`check_config_mgmt.py` / `check_gitops_state.py` for those.
+
+### As a GitHub Action
+
+```yaml
+- uses: kyhsa93/k8s-playbook@main
+  with:
+    path: rendered/            # file, directory, or several separated by spaces
+    fail-on-findings: 'true'   # 'false' to report without blocking the build
+```
+
+The summary table is written to the job summary, and a `findings` output (`'true'` /
+`'false'`) is available for later steps. Starting on a repo with existing violations is
+usually easier with `fail-on-findings: 'false'` first — a configuration error (exit 2)
+still fails the step either way, so a typo'd path can't be mistaken for a clean run.
+
+Render first if your manifests aren't checked in rendered:
+
+```yaml
+- run: helm template mychart -f values-prod.yaml > rendered.yaml
+- uses: kyhsa93/k8s-playbook@main
+  with:
+    path: rendered.yaml
+```
 
 ## Usage
 

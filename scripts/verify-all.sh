@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 export PATH="$PWD/.tools/bin:$PATH"
 
 SCRIPTS=(
+  scripts/verify-check-all.sh
   scripts/verify-genericity.sh
   scripts/verify-gitops-state.sh
   scripts/verify-config-secrets.sh

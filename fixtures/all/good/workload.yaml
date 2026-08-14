@@ -1,0 +1,55 @@
+# A complete, compliant deployment stack for the aggregate entrypoint. Split across
+# several files on purpose: check_all merges its inputs before checking, and the
+# PodDisruptionBudget, NetworkPolicy and HPA below each have to be matched against a
+# workload declared in a *different* file. Checking file-by-file would report all
+# three as missing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: payment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: payment-api
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: payment-api
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: payment-api
+          image: payment-api:1.4.2
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: payment-api-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8080
+            initialDelaySeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8080
+            initialDelaySeconds: 5

@@ -1,0 +1,84 @@
+name: 'Kubernetes anti-pattern check'
+description: >-
+  Check rendered Kubernetes manifests against the k8s-playbook anti-pattern catalog
+  (workload definition, availability, secrets, tenancy, networking, autoscaling).
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  path:
+    description: >-
+      Manifests to check: a file, a directory (searched recursively for .yaml/.yml),
+      or several of either separated by spaces. Point this at rendered output --
+      `kustomize build` / `helm template` results, not un-rendered templates.
+    required: true
+  python-version:
+    description: 'Python version used to run the harness.'
+    required: false
+    default: '3.12'
+  fail-on-findings:
+    description: >-
+      Whether findings fail the step. Set to 'false' to report without blocking,
+      which is the usual way to introduce the check to a repo that has existing
+      violations.
+    required: false
+    default: 'true'
+
+outputs:
+  findings:
+    description: "'true' when at least one check reported findings."
+    value: ${{ steps.run.outputs.findings }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - shell: bash
+      run: pip install --disable-pip-version-check -r "$GITHUB_ACTION_PATH/requirements.txt"
+
+    - id: run
+      shell: bash
+      # Inputs come in as environment variables rather than being interpolated into
+      # the script text, so a caller's input value is data here and never shell.
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+      run: |
+        set -o pipefail
+        status=0
+        # Unquoted on purpose: the input may name several paths.
+        python3 "$GITHUB_ACTION_PATH/harness/check_all.py" $INPUT_PATH \
+          | tee "$RUNNER_TEMP/k8s-playbook.log" || status=$?
+
+        if [ "$status" -eq 0 ]; then
+          echo "findings=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "findings=true" >> "$GITHUB_OUTPUT"
+        fi
+
+        {
+          echo '## Kubernetes anti-pattern check'
+          echo
+          echo '```'
+          # The summary table is the last block the harness prints; the per-check
+          # detail above it belongs in the log, not in everyone's run summary.
+          sed -n '/^=\{60\}$/,$p' "$RUNNER_TEMP/k8s-playbook.log"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        # Exit code 2 means the harness could not run at all -- a bad path, or no
+        # manifests where manifests were expected. That is a broken configuration,
+        # so it fails the step regardless of fail-on-findings, which only governs
+        # what to do about genuine findings.
+        if [ "$status" -ge 2 ]; then
+          echo "::error::check_all.py could not run (exit $status) -- check the 'path' input"
+          exit "$status"
+        fi
+        if [ "$status" -ne 0 ] && [ "$INPUT_FAIL_ON_FINDINGS" = 'true' ]; then
+          exit 1
+        fi
+        exit 0
