@@ -52,4 +52,8 @@ check "raw good-deployment (no netpol)" fail python3 harness/check_all.py fixtur
 # like a clean bill of health.
 check "empty directory is an error" fail bash -c 'd=$(mktemp -d); python3 harness/check_all.py "$d"'
 
+# A path that doesn't exist must exit 2 (cannot run), not 1 (findings): the action only
+# fails the step on findings when fail-on-findings is 'true', but always fails on 2.
+check "missing path exits 2" pass bash -c 'python3 harness/check_all.py does-not-exist.yaml 2>/dev/null; [ $? -eq 2 ]'
+
 exit $fail

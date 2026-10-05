@@ -96,7 +96,13 @@ def main(argv):
         print("usage: check_all.py <manifest.yaml|dir|-> [more...]", file=sys.stderr)
         return 2
 
-    stream = collect_inputs(argv)
+    try:
+        stream = collect_inputs(argv)
+    except OSError as e:
+        # A missing or unreadable path is a broken invocation, not a finding: exit 2
+        # so the action fails the step even with fail-on-findings: 'false'.
+        print(f"cannot read input: {e}", file=sys.stderr)
+        return 2
     if stream is None or not stream.strip():
         print("no manifests found in the given paths", file=sys.stderr)
         return 2
