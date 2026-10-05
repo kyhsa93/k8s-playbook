@@ -4,6 +4,12 @@
 
 The goal of this repo is to **define recurring Kubernetes deployment anti-patterns and catch them automatically**.
 
+## At a glance
+
+- **Scope**: a catalog of 19 Kubernetes deployment anti-patterns (resource/workload hygiene, GitOps state, config management, secrets, namespace/tenancy, networking, autoscaling), each paired with its correct-pattern counterpart.
+- **Status**: all 19 catalog items have a detection harness, and every harness has been genericity-validated against real tooling — not just schemas — including a live Argo CD, Flux, and Kargo controller.
+- **For**: platform/DevOps engineers who want to run these checks against their own manifests (see [Using this on your own manifests](#using-this-on-your-own-manifests)), or just want the anti-pattern catalog as a reference.
+
 ## Principle
 
 The core deliverable here is an **anti-pattern catalog + a detection harness**. Comparing tools (raw manifest vs Kustomize vs Helm, or Argo CD vs Flux) is not the point — that variety only exists as a fixture to prove the harness detects real, general violations rather than something that happens to match one tool's output shape.
