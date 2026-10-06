@@ -91,6 +91,9 @@ The summary table is written to the job summary, and a `findings` output (`'true
 usually easier with `fail-on-findings: 'false'` first — a configuration error (exit 2)
 still fails the step either way, so a typo'd path can't be mistaken for a clean run.
 
+Pin to a release tag (`@v0.1.0`) for reproducible builds; `@main` tracks development.
+Release notes: [docs/releases/v0.1.0.md](docs/releases/v0.1.0.md).
+
 Render first if your manifests aren't checked in rendered:
 
 ```yaml
